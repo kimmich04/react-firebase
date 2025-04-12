@@ -1,9 +1,10 @@
 import React, { useEffect, useState } from "react";
-import TodoSubject from "./Components/TodoSubject";
-import CreateTodo from "./Components/CreateTodo";
-import Todo from "./Components/Todo";
+import TodoSubject from "../Components/TodoSubject";
+import CreateTodo from "../Components/CreateTodo";
+import Todo from "../Components/Todo";
 import { collection, query, onSnapshot, doc, updateDoc, deleteDoc, addDoc } from "firebase/firestore";
-import { db } from "./Firebase";
+import { db } from "../Firebase";
+import './App.scss';
 
 function App() {
     const [todos, setTodos] = useState([]);
