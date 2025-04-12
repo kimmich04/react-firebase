@@ -1,0 +1,63 @@
+.modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  background-color: rgba(0, 0, 0, 0.6);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 1000;
+}
+
+.modal {
+  background: white;
+  padding: 30px;
+  border-radius: 10px;
+  width: 350px;
+  position: relative;
+
+  h2 {
+    margin-top: 0;
+  }
+
+  form {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+
+    input {
+      padding: 10px;
+      font-size: 1rem;
+    }
+
+    button {
+      padding: 10px;
+      background-color: #007bff;
+      border: none;
+      color: white;
+      font-weight: bold;
+      cursor: pointer;
+
+      &:hover {
+        background-color: #0056b3;
+      }
+    }
+  }
+
+  .close-btn {
+    position: absolute;
+    top: 5px;
+    right: 10px;
+    font-size: 1.5rem;
+    background: none;
+    border: none;
+    cursor: pointer;
+    color: #888;
+
+    &:hover {
+      color: red;
+    }
+  }
+}

@@ -1,38 +1,102 @@
-.App {
-  text-align: center;
+body {
+  font-family: Arial, sans-serif;
+  margin: 0;
+  padding: 0;
 }
 
-.App-logo {
-  height: 40vmin;
-  pointer-events: none;
-}
-
-@media (prefers-reduced-motion: no-preference) {
-  .App-logo {
-    animation: App-logo-spin infinite 20s linear;
-  }
-}
-
-.App-header {
-  background-color: #282c34;
-  min-height: 100vh;
+.navbar {
   display: flex;
-  flex-direction: column;
+  // justify-content: space-between;
+  gap: 40px;
   align-items: center;
-  justify-content: center;
-  font-size: calc(10px + 2vmin);
-  color: white;
+  padding: 10px 20px;
+  background-color: #f2f2f2;
+  
+  .logo {
+    margin-left: 100px;
+  }
+  .nav-links {
+    list-style: none;
+    display: flex;
+    gap: 40px;
+    font-weight: bold;
+    margin-left: 150px;
+  
+    li {
+      cursor: pointer;
+      transition: color 0.3s ease; // Optional smooth transition
+  
+      &:hover {
+        color: red; // ✅ Each item turns red on hover
+      }
+    }
+  }
+  
+
+  .time-container {
+      display: flex;
+      flex-direction: column;
+      align-items: flex-end;
+      margin-left: 100px;
+      .time {
+          font-size: 1.2rem;
+          font-weight: bold;
+          color: #333;
+      }
+
+      .date {
+          font-size: 1rem;
+          color: #555;
+          // font-style: italic;
+      }
+  }
+
+  .login-button {
+    border: none;
+    cursor: pointer;
+    font-size: 15px;
+    &:hover {
+      text-decoration: underline; // ✅ Underline on hover
+    }
+  }
+
+  .sign-up-button {
+    padding: 10px 20px;
+    border-radius: 20px;
+    font-weight: bold;
+    cursor: pointer;
+
+    &:hover {
+        background-color: #003fb3; /* Darker blue on hover */
+        color: white;
+    }
+}
 }
 
-.App-link {
-  color: #61dafb;
+.search-bar {
+  display: flex;
+  align-items: center;
+  border: 1px solid #ccc;
+  border-radius: 4px;
+  padding: 5px;
+  margin-left: 20px;
+
+  input {
+      border: none;
+      outline: none;
+      padding: 5px;
+      font-size: 1rem;
+  }
+
+  i {
+      margin-left: 8px;
+      color: #888;
+      cursor: pointer;
+  }
 }
 
-@keyframes App-logo-spin {
-  from {
-    transform: rotate(0deg);
-  }
-  to {
-    transform: rotate(360deg);
-  }
+.main-content {
+  display: flex;
+  justify-content: space-around;
+  padding: 20px;
 }
