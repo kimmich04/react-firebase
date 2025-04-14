@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from "react";
 import "../views/App.scss";
 import AuthModal from "./AuthModal";
+import { Link } from "react-router-dom";
 
 function Navbar() {
   const [time, setTime] = useState(new Date());
@@ -13,14 +14,17 @@ function Navbar() {
 
   return (
     <nav className="navbar">
-      <div className="logo">Online Auction Hardware</div>
+      <div className="logo">
+        <Link to="/">Online Auction PC Hardware</Link>
+      </div>
 
       <ul className="nav-links">
-        <li>Create Auction</li>
-        <li>My Auction</li>
-        <li>News</li>
-        <li>Contact</li>
+        <li><Link to="/create-auction">Create Auction</Link></li>
+        <li><Link to="/my-auctions">My Auction</Link></li>
+        <li><Link to="/news">News</Link></li>
+        <li><Link to="/contact">Contact</Link></li>
       </ul>
+
 
       <div className="time-container">
         <div className="time">{time.toLocaleTimeString("en-US", { hour12: false })}</div>

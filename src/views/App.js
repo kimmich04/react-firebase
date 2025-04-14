@@ -1,18 +1,24 @@
-import React, { useEffect, useState } from "react";
+import React from "react";
+import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
 import Navbar from "../components/Navbar";
-import { collection, query, onSnapshot, doc, updateDoc, deleteDoc, addDoc } from "firebase/firestore";
-import { db } from "../Firebase";
+import CreateAuctionPage from "../views/CreateAuctionPage"; // You'll create this file
 import './App.scss';
 import "@fortawesome/fontawesome-free/css/all.min.css";
 
 function App() {
-    return (
-        <div className="App">
-            <Navbar />
-            <div className="main-content">
-            </div>
+  return (
+    <Router>
+      <div className="App">
+        <Navbar />
+        <div className="main-content">
+          <Routes>
+            <Route path="/" element={<h1>Welcome to Online Auction</h1>} />
+            <Route path="/create-auction" element={<CreateAuctionPage />} />
+          </Routes>
         </div>
-    );
+      </div>
+    </Router>
+  );
 }
 
 export default App;
