@@ -1,0 +1,54 @@
+.profile-container {
+  padding: 20px;
+
+  h2 {
+    margin-bottom: 20px;
+  }
+
+  .profile-form {
+    display: flex;
+    flex-direction: column;
+    max-width: 400px;
+    gap: 12px;
+
+    input[type="text"],
+    input[type="email"],
+    input[type="tel"],
+    input[type="date"] {
+      padding: 10px;
+      font-size: 1rem;
+      border: 1px solid #ccc;
+      border-radius: 4px;
+    }
+
+    .sex-checkbox {
+      display: flex;
+      gap: 15px;
+
+      label {
+        display: flex;
+        align-items: center;
+        gap: 5px;
+      }
+    }
+
+    button {
+      margin-top: 16px;
+      padding: 10px;
+      font-weight: bold;
+      background-color: #007bff;
+      color: white;
+      border: none;
+      border-radius: 4px;
+      cursor: pointer;
+
+      &:hover {
+        background-color: #0056b3;
+      }
+    }
+
+    .success-message {
+      color: green;
+    }
+  }
+}

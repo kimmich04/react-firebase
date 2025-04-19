@@ -2,7 +2,7 @@ import React, { useState } from "react";
 import { addDoc, collection } from "firebase/firestore";
 import { db } from "../Firebase";
 
-function CreateAuctionPage() {
+export default function CreateAuctionPage() {
   const [formData, setFormData] = useState({
     name: "",
     maxPeople: "",
@@ -50,5 +50,3 @@ function CreateAuctionPage() {
     </div>
   );
 }
-
-export default CreateAuctionPage;
