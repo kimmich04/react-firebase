@@ -49,7 +49,7 @@ function AuthModal({ mode, onClose }) {
         });
 
         onClose();
-        // 🔥 Open login modal after sign up
+        // Open login modal after sign up
         setTimeout(() => {
           window.dispatchEvent(new Event("open-login-after-signup"));
         }, 100);
