@@ -40,7 +40,7 @@ export default function ProfilePage() {
       const ref = doc(db, "users", user.uid);
       await updateDoc(ref, {
         ...editData,
-        updatedAt: new Date(), // Save last changed tim
+        lastChanged: new Date(), // Save last changed tim
       });
 
       await updateProfile(auth.currentUser, {
