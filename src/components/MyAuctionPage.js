@@ -1,31 +1,30 @@
 import React, { useState, useEffect } from "react";
-import { collection, getDocs, query, orderBy,where } from "firebase/firestore";
-import { db,auth } from "../Firebase";
+import { collection, getDocs, query, orderBy, where } from "firebase/firestore";
+import { db, auth } from "../Firebase";
+import "../styles/MyAuctionsPage.scss";
+import { Link } from "react-router-dom";
+
 export default function MyAuctionsPage() {
   const [auctions, setAuctions] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
-  const [currentUser, setCurrentUser] = useState(null);
-
-  useEffect(() => {
-    const unsubscribe = auth.onAuthStateChanged((user) => {
-      setCurrentUser(user);
-    });
-    return () => unsubscribe();
-  }, []);
 
   useEffect(() => {
     const fetchAuctions = async () => {
-        if (!currentUser) {
-            setLoading(false);
-            return;
-          }
       try {
+        const user = auth.currentUser;
+        // if (!user) {
+        //   setError("You must be logged in to view your auctions.");
+        //   setLoading(false);
+        //   return;
+        // }
+
         const q = query(
           collection(db, "auctions"),
-          where("userId", "==", currentUser.uid), // Filter by userId
+          where("userId", "==", user.uid),
           orderBy("createdAt", "desc")
         );
+
         const querySnapshot = await getDocs(q);
         const fetchedAuctions = querySnapshot.docs.map((doc) => ({
           id: doc.id,
@@ -40,42 +39,44 @@ export default function MyAuctionsPage() {
     };
 
     fetchAuctions();
-  }, [currentUser]); // Fetch auctions when currentUser changes
+  }, []);
 
   if (loading) return <p>Loading auctions...</p>;
   if (error) return <p style={{ color: "red" }}>{error}</p>;
-  if (!currentUser) return <p>Please log in to view your auctions.</p>;
-
 
   return (
     <div className="my-auctions-container">
       <h2>My Auctions</h2>
       <div className="auctions-grid">
         {auctions.map((auction) => (
-          <div key={auction.id} className="auction-card">
-            {auction.imageUrl && (
-              <img
-                src={auction.imageUrl}
-                alt={auction.product}
-                className="auction-image"
-              />
-            )}
+          <Link to={`/auction/${auction.id}`} className="auction-link" key={auction.id}>
+          <div className="auction-card">
+            {auction.imageUrl && (<img src={auction.imageUrl} alt={auction.name} className="auction-image"/>)}
+        
             <h3>{auction.name}</h3>
-            <p>Product: {auction.product}</p>
-            <p>Category: {auction.category}</p>
-            <p>Starting Price: {auction.startingPrice}</p>
-            {auction.startTime && (
-              <p>
-                Start Time:{" "}
-                {auction.startTime.toDate().toLocaleString()}
-              </p>
-            )}
-            {auction.endTime && (
-              <p>
-                End Time: {auction.endTime.toDate().toLocaleString()}
-              </p>
-            )}
+            <p className="meta"> Product: {auction.product}</p>
+            <p className="meta"> Category: {auction.category}</p>
+            <p className="starting-price"> Starting Price: {auction.startingPrice} </p>
+        
+            <div className="time-section">
+              {auction.startTime && (
+                <p className="time">🕒 Start: {auction.startTime.toDate().toLocaleString("en-GB", {
+                  day: "2-digit", month: "2-digit", year: "numeric",
+                  hour: "2-digit", minute: "2-digit", second: "2-digit", hour12: false
+                })}</p>
+              )}
+              {auction.endTime && (
+                <p className="time">⏰ End: {auction.endTime.toDate().toLocaleString("en-GB", {
+                  day: "2-digit", month: "2-digit", year: "numeric",
+                  hour: "2-digit", minute: "2-digit", second: "2-digit", hour12: false
+                })}</p>
+              )}
+            </div>
+        
+            <div className="detail-button">Detail</div>
           </div>
+        </Link>
+        
         ))}
       </div>
     </div>

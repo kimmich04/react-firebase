@@ -1,0 +1,102 @@
+.home-page-container {
+    padding: 20px;
+  
+    h2 {
+      margin-bottom: 20px;
+    }
+    .home-page-button{
+        display: flex;
+        gap: 20px;
+        margin-bottom: 20px;
+        .create-auction-button, .my-auction-button{
+            background-color: #007bff;
+            color: white;
+            padding: 8px 15px;
+            border-radius: 5px;
+            text-align: center;
+            cursor: pointer;
+            transition: background-color 0.2s ease-in-out;
+            text-decoration: none;
+            &:hover {
+              background-color: #0056b3;
+            }
+        }
+    }
+  
+    .auctions-section {
+      margin-bottom: 30px;
+  
+      h3 {
+        margin-bottom: 10px;
+      }
+  
+      .auctions-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+        gap: 20px;
+      }
+    }
+  
+    .auction-link {
+      text-decoration: none;
+      color: inherit;
+    }
+  
+    .auction-card {
+      border: 1px solid #ccc;
+      padding: 15px;
+      border-radius: 5px;
+      box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+      transition: transform 0.2s ease-in-out;
+  
+      &:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
+      }
+  
+      .auction-image {
+        width: 100%;
+        height: 150px;
+        object-fit: cover;
+        margin-bottom: 10px;
+        border-radius: 5px;
+      }
+  
+      h3 {
+        margin-bottom: 5px;
+        font-size: 1.1rem;
+      }
+  
+      .meta {
+        font-size: 0.9rem;
+        color: #666;
+        margin-bottom: 5px;
+      }
+  
+      .starting-price {
+        font-weight: bold;
+        margin-bottom: 10px;
+      }
+  
+      .time-section {
+        .time {
+          font-size: 0.85rem;
+          margin-bottom: 2px;
+        }
+      }
+  
+      .detail-button {
+        background-color: #007bff;
+        color: white;
+        padding: 8px 15px;
+        border-radius: 5px;
+        text-align: center;
+        cursor: pointer;
+        transition: background-color 0.2s ease-in-out;
+  
+        &:hover {
+          background-color: #0056b3;
+        }
+      }
+    }
+  }
