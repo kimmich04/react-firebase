@@ -4,7 +4,6 @@ import AuthModal from "./AuthModal";
 import { Link, useNavigate } from "react-router-dom";
 import { auth } from "../Firebase";
 import { onAuthStateChanged, signOut } from "firebase/auth";
-import MyAuctionsPage from "./MyAuctionPage";
 
 export default function Navbar() {
   const [time, setTime] = useState(new Date());
@@ -54,8 +53,8 @@ export default function Navbar() {
 
       <ul className="nav-links">
         <li onClick={() => (currentUser ? navigate("/create-auction") : setAuthMode("login"))}>Create Auction</li>
-        <li onClick={() => (currentUser ? navigate("/my-auctions") : setAuthMode("login"))}>My Auction</li>{MyAuctionsPage}
-        <li><Link to="/news">News</Link></li>
+        <li onClick={() => (currentUser ? navigate("/my-auctions") : setAuthMode("login"))}>My Auction</li>
+        <li><Link to="/notifications">Notifications</Link></li>
         <li><Link to="/contact">Contact</Link></li>
       </ul>
 

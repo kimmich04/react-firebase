@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { getStorage, ref, uploadBytesResumable, getDownloadURL } from "firebase/storage";
 import { v4 as uuidv4 } from 'uuid';
+import "../styles/Uploadimage.scss";
 
 function Uploadimage({ onUploadComplete }) {
   const [image, setImage] = useState(null);
@@ -28,7 +29,6 @@ function Uploadimage({ onUploadComplete }) {
     setUploadProgress(0);
     setUploadError(null);
 
-    // Correct the imageName
     const imageName = `product_images/${uuidv4()}_${image.name}`;
     const imageRef = ref(storage, imageName);
     const uploadTask = uploadBytesResumable(imageRef, image);
