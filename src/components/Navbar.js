@@ -5,11 +5,12 @@ import { Link, useNavigate } from "react-router-dom";
 import { auth } from "../Firebase";
 import { onAuthStateChanged, signOut } from "firebase/auth";
 
-export default function Navbar() {
+export default function Navbar({ onSearch }) {
   const [time, setTime] = useState(new Date());
   const [authMode, setAuthMode] = useState(null);
   const [currentUser, setCurrentUser] = useState(null);
   const [showDropdown, setShowDropdown] = useState(false);
+  const [searchTerm, setSearchTerm] = useState(""); // Add searchTerm state
   const timeoutRef = useRef(null);
   const navigate = useNavigate();
 
@@ -45,6 +46,15 @@ export default function Navbar() {
     setShowDropdown(false);
   };
 
+  // Handle search input change
+  const handleSearchChange = (e) => {
+    const term = e.target.value;
+    setSearchTerm(term);
+    if (onSearch) {
+      onSearch(term); // Pass the search term to the parent component
+    }
+  };
+
   return (
     <nav className="navbar">
       <div className="logo">
@@ -54,7 +64,7 @@ export default function Navbar() {
       <ul className="nav-links">
         <li onClick={() => (currentUser ? navigate("/create-auction") : setAuthMode("login"))}>Create Auction</li>
         <li onClick={() => (currentUser ? navigate("/my-auctions") : setAuthMode("login"))}>My Auction</li>
-        <li><Link to="/notifications">Notifications</Link></li>
+        <li><Link to="/news">News</Link></li>
         <li><Link to="/contact">Contact</Link></li>
       </ul>
 
@@ -71,7 +81,7 @@ export default function Navbar() {
       </div>
 
       <div className="search-bar">
-        <input type="text" placeholder="Search..." />
+        <input type="text" placeholder="Search..." value={searchTerm} onChange={handleSearchChange} /> {/* Add value and onChange */}
         <i className="fas fa-search"></i>
       </div>
 
