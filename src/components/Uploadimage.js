@@ -1,11 +1,11 @@
-import React, { useState } from "react";
+import React, { useState } from 'react';
 import { getStorage, ref, uploadBytesResumable, getDownloadURL } from "firebase/storage";
-import { v4 as uuidv4 } from "uuid";
+import { v4 as uuidv4 } from 'uuid';
 
-function Uploadimage({ onImageUrlChange }) {
+function Uploadimage({ onUploadComplete }) {
   const [image, setImage] = useState(null);
   const [uploadProgress, setUploadProgress] = useState(0);
-  const [imageUrl, setImageUrl] = useState("");
+  const [imageUrl, setImageUrl] = useState('');
   const [isUploading, setIsUploading] = useState(false);
   const [uploadError, setUploadError] = useState(null);
 
@@ -28,17 +28,17 @@ function Uploadimage({ onImageUrlChange }) {
     setUploadProgress(0);
     setUploadError(null);
 
+    // Correct the imageName
     const imageName = `product_images/${uuidv4()}_${image.name}`;
     const imageRef = ref(storage, imageName);
-
     const uploadTask = uploadBytesResumable(imageRef, image);
 
     uploadTask.on(
-      "state_changed",
+      'state_changed',
       (snapshot) => {
         const progress = (snapshot.bytesTransferred / snapshot.totalBytes) * 100;
         setUploadProgress(progress);
-        console.log("Upload is " + progress + "% done");
+        console.log('Upload is ' + progress + '% done');
       },
       (error) => {
         setIsUploading(false);
@@ -48,10 +48,13 @@ function Uploadimage({ onImageUrlChange }) {
       () => {
         getDownloadURL(uploadTask.snapshot.ref)
           .then((downloadURL) => {
-            console.log("File available at", downloadURL);
+            console.log('File available at', downloadURL);
             setImageUrl(downloadURL);
-            onImageUrlChange(downloadURL); // Pass the URL back to CreateAuctionPage
             setIsUploading(false);
+
+            if (onUploadComplete) {
+              onUploadComplete(downloadURL);
+            }
           })
           .catch((error) => {
             setIsUploading(false);
@@ -68,19 +71,20 @@ function Uploadimage({ onImageUrlChange }) {
       <button onClick={handleUpload} disabled={!image || isUploading}>
         {isUploading ? "Uploading..." : "Upload Image"}
       </button>
-      {uploadProgress > 0 && (
-        <div>Upload Progress: {uploadProgress.toFixed(2)}%</div>
+
+      {uploadProgress > 0 && uploadProgress < 100 && (
+        <p>Uploading: {uploadProgress.toFixed(0)}%</p>
       )}
+
       {imageUrl && (
-        <div>
-          <img
-            src={imageUrl}
-            alt="Uploaded Product"
-            style={{ maxWidth: "200px" }}
-          />
+        <div className="image">
+          <img src={imageUrl} alt="Uploaded Product" />
         </div>
       )}
-      {uploadError && <div style={{ color: "red" }}>{uploadError}</div>}
+
+      {uploadError && (
+        <div className="image-err">{uploadError}</div>
+      )}
     </div>
   );
 }

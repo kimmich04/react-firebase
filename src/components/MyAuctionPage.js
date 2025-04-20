@@ -1,16 +1,29 @@
 import React, { useState, useEffect } from "react";
-import { collection, getDocs, query, orderBy } from "firebase/firestore";
-import { db } from "../Firebase";
+import { collection, getDocs, query, orderBy,where } from "firebase/firestore";
+import { db,auth } from "../Firebase";
 export default function MyAuctionsPage() {
   const [auctions, setAuctions] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [currentUser, setCurrentUser] = useState(null);
+
+  useEffect(() => {
+    const unsubscribe = auth.onAuthStateChanged((user) => {
+      setCurrentUser(user);
+    });
+    return () => unsubscribe();
+  }, []);
 
   useEffect(() => {
     const fetchAuctions = async () => {
+        if (!currentUser) {
+            setLoading(false);
+            return;
+          }
       try {
         const q = query(
           collection(db, "auctions"),
+          where("userId", "==", currentUser.uid), // Filter by userId
           orderBy("createdAt", "desc")
         );
         const querySnapshot = await getDocs(q);
@@ -27,10 +40,12 @@ export default function MyAuctionsPage() {
     };
 
     fetchAuctions();
-  }, []);
+  }, [currentUser]); // Fetch auctions when currentUser changes
 
   if (loading) return <p>Loading auctions...</p>;
   if (error) return <p style={{ color: "red" }}>{error}</p>;
+  if (!currentUser) return <p>Please log in to view your auctions.</p>;
+
 
   return (
     <div className="my-auctions-container">
