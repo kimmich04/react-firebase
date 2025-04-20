@@ -1,6 +1,7 @@
 import React, { useState } from "react";
 import { addDoc, collection } from "firebase/firestore";
 import { db } from "../Firebase";
+import Uploadimage from "./Uploadimage.js";
 
 export default function CreateAuctionPage() {
   const [formData, setFormData] = useState({
@@ -11,7 +12,11 @@ export default function CreateAuctionPage() {
     description: "",
     startingPrice: "",
     stepPrice: "",
+    imageURL:""
   });
+  const{formError,setFormError}=useState("");
+  const[isSubmitting,setIsSubmitting]=useState(false);
+  
 
   const handleChange = (e) => {
     const { name, value } = e.target;
@@ -45,6 +50,9 @@ export default function CreateAuctionPage() {
           <input name="startingPrice" placeholder="Starting Price" onChange={handleChange} />
           <input name="stepPrice" placeholder="Step Price (Optional)" onChange={handleChange} />
         </div>
+        <div>
+      <Uploadimage/>
+    </div>
       </div>
       <button onClick={handleSubmit}>Publish</button>
     </div>

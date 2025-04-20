@@ -5,7 +5,6 @@ import CreateAuctionPage from "../components/CreateAuctionPage";
 import ProfilePage from "../components/ProfilePage"; 
 import '../styles/Navbar.scss';
 import "@fortawesome/fontawesome-free/css/all.min.css";
-
 export default function App() {
   return (
     <Router>
