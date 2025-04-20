@@ -85,5 +85,23 @@
       background-color: #002a80;
     }
   }
+
+  .edit-button {
+    position: absolute;
+    bottom: 16px;
+    right: 16px;
+    padding: 8px 12px;
+    background-color: #28a745;
+    color: #fff;
+    font-weight: 500;
+    font-size: 14px;
+    border-radius: 6px;
+    transition: background-color 0.2s ease;
+  
+    &:hover {
+      background-color: #1e7e34;
+    }
+  }
+  
 }
 

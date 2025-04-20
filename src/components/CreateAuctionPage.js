@@ -21,10 +21,6 @@ export default function CreateAuctionPage() {
     setFormData((prev) => ({ ...prev, [name]: value }));
   };
 
-  const handleImageUrlChange = (url) => {
-    setFormData((prev) => ({ ...prev, imageUrl: url }));
-  };
-
   // Handle changes for start and end times
   const handleDateTimeChange = (e) => {
     const { name, value } = e.target;

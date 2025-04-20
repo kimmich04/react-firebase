@@ -2,12 +2,13 @@ import React, { useState, useEffect } from "react";
 import { collection, getDocs, query, orderBy, where } from "firebase/firestore";
 import { db, auth } from "../Firebase";
 import "../styles/MyAuctionsPage.scss";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 
 export default function MyAuctionsPage() {
   const [auctions, setAuctions] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const navigate = useNavigate();
 
   useEffect(() => {
     const fetchAuctions = async () => {
@@ -41,6 +42,10 @@ export default function MyAuctionsPage() {
     fetchAuctions();
   }, []);
 
+  // const goToEditAuction = () => {
+  //   navigate("/auction/edit-auction/${auction.id}");
+  // };
+
   if (loading) return <p>Loading auctions...</p>;
   if (error) return <p style={{ color: "red" }}>{error}</p>;
 
@@ -56,7 +61,7 @@ export default function MyAuctionsPage() {
             <h3>{auction.name}</h3>
             <p className="meta"> Product: {auction.product}</p>
             <p className="meta"> Category: {auction.category}</p>
-            <p className="starting-price"> Starting Price: {auction.startingPrice} VNĐ</p>
+            <p className="starting-price"> Starting Price: {auction.startingPrice}</p>
         
             <div className="time-section">
               {auction.startTime && (
@@ -74,6 +79,9 @@ export default function MyAuctionsPage() {
             </div>
         
             <div className="detail-button">Detail</div>
+            <Link to={`/auction/edit-auction/${auction.id}`} className="" key={auction.id}>
+              <div className="edit-button" >Edit</div>
+            </Link>
           </div>
         </Link>
         

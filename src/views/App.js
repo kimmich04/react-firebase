@@ -6,6 +6,7 @@ import ProfilePage from "../components/ProfilePage";
 import MyAuctionsPage from "../components/MyAuctionsPage";
 import '../styles/Navbar.scss';
 import "@fortawesome/fontawesome-free/css/all.min.css";
+import Product from "../components/Products"; 
 
 export default function App() {
   return (
@@ -18,7 +19,11 @@ export default function App() {
             <Route path="/create-auction" element={<CreateAuctionPage />} />
             <Route path="/my-auctions" element={<MyAuctionsPage />} />
             <Route path="/profile" element={<ProfilePage />} /> 
+            <Route path="/auction/:id" element={<Product />} />
+            {/* <Route path="/auction/:id/edit" element={ProductEdit}/> */}
           </Routes>
+
+          
         </div>
       </div>
     </Router>
