@@ -5,7 +5,7 @@ import CreateAuctionPage from "../components/CreateAuctionPage";
 import ProfilePage from "../components/ProfilePage";
 import '../styles/Navbar.scss';
 import "@fortawesome/fontawesome-free/css/all.min.css";
-import MyAuctionsPage from "../components/MyAuctionPage";
+import MyAuctionsPage from "../components/MyAuctionsPage";
 import { collection, query, orderBy, onSnapshot, where } from "firebase/firestore";
 import { db } from "../Firebase";
 import "../styles/HomePage.scss";

@@ -56,7 +56,7 @@ export default function MyAuctionsPage() {
             <h3>{auction.name}</h3>
             <p className="meta"> Product: {auction.product}</p>
             <p className="meta"> Category: {auction.category}</p>
-            <p className="starting-price"> Starting Price: {auction.startingPrice} VNĐ</p>
+            <p className="starting-price"> Starting Price: {auction.startingPrice} </p>
         
             <div className="time-section">
               {auction.startTime && (
