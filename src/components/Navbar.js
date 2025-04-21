@@ -5,12 +5,12 @@ import { Link, useNavigate } from "react-router-dom";
 import { auth } from "../Firebase";
 import { onAuthStateChanged, signOut } from "firebase/auth";
 
-export default function Navbar({ onSearch }) {
+export default function Navbar({ onSearchChange }) { // Change onSearch to onSearchChange
   const [time, setTime] = useState(new Date());
   const [authMode, setAuthMode] = useState(null);
   const [currentUser, setCurrentUser] = useState(null);
   const [showDropdown, setShowDropdown] = useState(false);
-  const [searchTerm, setSearchTerm] = useState(""); // Add searchTerm state
+  const [searchTerm, setSearchTerm] = useState("");
   const timeoutRef = useRef(null);
   const navigate = useNavigate();
 
@@ -46,12 +46,11 @@ export default function Navbar({ onSearch }) {
     setShowDropdown(false);
   };
 
-  // Handle search input change
   const handleSearchChange = (e) => {
     const term = e.target.value;
     setSearchTerm(term);
-    if (onSearch) {
-      onSearch(term); // Pass the search term to the parent component
+    if (onSearchChange) { // Change onSearch to onSearchChange
+      onSearchChange(term);
     }
   };
 
@@ -64,7 +63,7 @@ export default function Navbar({ onSearch }) {
       <ul className="nav-links">
         <li onClick={() => (currentUser ? navigate("/create-auction") : setAuthMode("login"))}>Create Auction</li>
         <li onClick={() => (currentUser ? navigate("/my-auctions") : setAuthMode("login"))}>My Auction</li>
-        <li><Link to="/notifications">Notifications</Link></li>
+        <li><Link to="/news">News</Link></li>
         <li><Link to="/contact">Contact</Link></li>
       </ul>
 
@@ -81,7 +80,7 @@ export default function Navbar({ onSearch }) {
       </div>
 
       <div className="search-bar">
-        <input type="text" placeholder="Search..." value={searchTerm} onChange={handleSearchChange} /> {/* Add value and onChange */}
+        <input type="text" placeholder="Search..." value={searchTerm} onChange={handleSearchChange} />
         <i className="fas fa-search"></i>
       </div>
 

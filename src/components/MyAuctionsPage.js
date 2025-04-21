@@ -4,10 +4,11 @@ import { db, auth } from "../Firebase";
 import "../styles/MyAuctionsPage.scss";
 import { useNavigate } from "react-router-dom";
 
-export default function MyAuctionsPage() {
+export default function MyAuctionsPage({ searchTerm }) { // Add searchTerm prop
   const [auctions, setAuctions] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [filteredAuctions, setFilteredAuctions] = useState([]);
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -36,14 +37,30 @@ export default function MyAuctionsPage() {
     fetchAuctions();
   }, []);
 
+  useEffect(() => {
+    if (searchTerm) {
+      const filtered = auctions.filter((auction) => {
+        return (
+          auction.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+          auction.product.toLowerCase().includes(searchTerm.toLowerCase())
+        );
+      });
+      setFilteredAuctions(filtered);
+    } else {
+      setFilteredAuctions(auctions);
+    }
+  }, [searchTerm, auctions]);
+
   if (loading) return <p>Loading auctions...</p>;
   if (error) return <p style={{ color: "red" }}>{error}</p>;
 
   return (
     <div className="my-auctions-container">
-      <h2>My Auctions</h2>
+      <div className="my-auctions-header">
+        <h2>My Auctions</h2>
+      </div>
       <div className="auctions-grid">
-        {auctions.map((auction) => {
+        {filteredAuctions.map((auction) => {
           const now = new Date();
           const start = auction.startTime?.toDate();
           const canEdit = start && now < start;

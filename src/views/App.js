@@ -18,8 +18,8 @@ function App() {
   const [ongoingAuctions, setOngoingAuctions] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
-  const [searchTerm, setSearchTerm] = useState(""); // Add searchTerm state
-  const [filteredAuctions, setFilteredAuctions] = useState([]); // Add filteredAuctions state
+  const [searchTerm, setSearchTerm] = useState("");
+  const [filteredAuctions, setFilteredAuctions] = useState([]);
 
   useEffect(() => {
     const q = query(collection(db, "auctions"), orderBy("createdAt", "desc"));
@@ -81,12 +81,12 @@ function App() {
   return (
     <Router>
       <div className="App">
-        <Navbar onSearch={setSearchTerm} /> {/* Pass setSearchTerm as onSearch */}
+        <Navbar onSearchChange={setSearchTerm} /> {/* Pass setSearchTerm as onSearchChange */}
         <div className="main-content">
           <Routes>
             <Route path="/create-auction" element={<CreateAuctionPage />} />
             <Route path="/profile" element={<ProfilePage />} />
-            <Route path="/my-auctions" element={<MyAuctionsPage />} />
+            <Route path="/my-auctions" element={<MyAuctionsPage searchTerm={searchTerm} />} /> {/* Pass searchTerm as a prop */}
             <Route path="/auction/:id" element={<Product />} />
             <Route path="/auction/edit-auction/:id" element={<EditAuctionsPage />} />
 
