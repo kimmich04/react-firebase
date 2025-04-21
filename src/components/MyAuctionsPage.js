@@ -2,23 +2,18 @@ import React, { useState, useEffect } from "react";
 import { collection, getDocs, query, orderBy, where } from "firebase/firestore";
 import { db, auth } from "../Firebase";
 import "../styles/MyAuctionsPage.scss";
-import { Link } from "react-router-dom";
+import { useNavigate } from "react-router-dom";
 
 export default function MyAuctionsPage() {
   const [auctions, setAuctions] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const navigate = useNavigate();
 
   useEffect(() => {
     const fetchAuctions = async () => {
       try {
         const user = auth.currentUser;
-        // if (!user) {
-        //   setError("You must be logged in to view your auctions.");
-        //   setLoading(false);
-        //   return;
-        // }
-
         const q = query(
           collection(db, "auctions"),
           where("userId", "==", user.uid),
@@ -48,36 +43,75 @@ export default function MyAuctionsPage() {
     <div className="my-auctions-container">
       <h2>My Auctions</h2>
       <div className="auctions-grid">
-        {auctions.map((auction) => (
-          <Link to={`/auction/${auction.id}`} className="auction-link" key={auction.id}>
-          <div className="auction-card">
-            {auction.imageUrl && (<img src={auction.imageUrl} alt={auction.name} className="auction-image"/>)}
-        
-            <h3>{auction.name}</h3>
-            <p className="meta"> Product: {auction.product}</p>
-            <p className="meta"> Category: {auction.category}</p>
-            <p className="starting-price"> Starting Price: {auction.startingPrice} </p>
-        
-            <div className="time-section">
-              {auction.startTime && (
-                <p className="time">🕒 Start: {auction.startTime.toDate().toLocaleString("en-GB", {
-                  day: "2-digit", month: "2-digit", year: "numeric",
-                  hour: "2-digit", minute: "2-digit", second: "2-digit", hour12: false
-                })}</p>
+        {auctions.map((auction) => {
+          const now = new Date();
+          const start = auction.startTime?.toDate();
+          const canEdit = start && now < start;
+
+          return (
+            <div
+              key={auction.id}
+              className="auction-card"
+              onClick={() => navigate(`/auction/${auction.id}`)}
+            >
+              {auction.imageUrl && (
+                <img
+                  src={auction.imageUrl}
+                  alt={auction.name}
+                  className="auction-image"
+                />
               )}
-              {auction.endTime && (
-                <p className="time">⏰ End: {auction.endTime.toDate().toLocaleString("en-GB", {
-                  day: "2-digit", month: "2-digit", year: "numeric",
-                  hour: "2-digit", minute: "2-digit", second: "2-digit", hour12: false
-                })}</p>
+
+              <h3>{auction.name}</h3>
+              <p className="meta"> Product: {auction.product}</p>
+              <p className="meta"> Category: {auction.category}</p>
+              <p className="starting-price"> Starting Price: {auction.startingPrice}</p>
+
+              <div className="time-section">
+                {auction.startTime && (
+                  <p className="time">
+                    🕒 Start: {auction.startTime.toDate().toLocaleString("en-GB", {
+                      day: "2-digit",
+                      month: "2-digit",
+                      year: "numeric",
+                      hour: "2-digit",
+                      minute: "2-digit",
+                      second: "2-digit",
+                      hour12: false,
+                    })}
+                  </p>
+                )}
+                {auction.endTime && (
+                  <p className="time">
+                    ⏰ End: {auction.endTime.toDate().toLocaleString("en-GB", {
+                      day: "2-digit",
+                      month: "2-digit",
+                      year: "numeric",
+                      hour: "2-digit",
+                      minute: "2-digit",
+                      second: "2-digit",
+                      hour12: false,
+                    })}
+                  </p>
+                )}
+              </div>
+
+              <div className="detail-button">Detail</div>
+
+              {canEdit && (
+                <div
+                  className="edit-button"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    navigate(`/auction/edit-auction/${auction.id}`);
+                  }}
+                >
+                  Edit
+                </div>
               )}
             </div>
-        
-            <div className="detail-button">Detail</div>
-          </div>
-        </Link>
-        
-        ))}
+          );
+        })}
       </div>
     </div>
   );

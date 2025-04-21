@@ -1,7 +1,9 @@
 import React, { useState } from "react";
 import { addDoc, collection } from "firebase/firestore";
-import { db,auth} from "../Firebase";
-import Uploadimage from "./Uploadimage.js";
+import { db, auth } from "../Firebase";
+import { getStorage, ref, uploadBytes, getDownloadURL } from "firebase/storage";
+import { useNavigate } from "react-router-dom";
+import "../styles/CreateAuctionPage.scss";
 
 export default function CreateAuctionPage() {
   const [formData, setFormData] = useState({
@@ -12,23 +14,39 @@ export default function CreateAuctionPage() {
     description: "",
     startingPrice: "",
     stepPrice: "",
-    imageUrl: "",
-    startTime: null,
-    endTime: null,
+    startTime: "",
+    endTime: "",
   });
+
+  const [imageUrl, setImageUrl] = useState(null);
+  const [imageError, setImageError] = useState(false);
+  const navigate = useNavigate();
+
   const handleChange = (e) => {
     const { name, value } = e.target;
     setFormData((prev) => ({ ...prev, [name]: value }));
   };
 
-  const handleImageUrlChange = (url) => {
-    setFormData((prev) => ({ ...prev, imageUrl: url }));
-  };
-
-  // Handle changes for start and end times
   const handleDateTimeChange = (e) => {
     const { name, value } = e.target;
     setFormData((prev) => ({ ...prev, [name]: new Date(value) }));
+  };
+
+  const handleImageChange = async (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+
+    try {
+      const storage = getStorage();
+      const storageRef = ref(storage, `auction_images/${file.name}`);
+      await uploadBytes(storageRef, file);
+      const downloadURL = await getDownloadURL(storageRef);
+      setImageUrl(downloadURL);
+      setImageError(false);
+    } catch (err) {
+      console.error("Image upload failed:", err);
+      setImageError(true);
+    }
   };
 
   const handleSubmit = async (e) => {
@@ -44,53 +62,62 @@ export default function CreateAuctionPage() {
       await addDoc(collection(db, "auctions"), {
         ...formData,
         imageUrl,
-        userId:user.uid,
+        userId: user.uid,
         createdAt: new Date(),
       });
       alert("✅ Auction created!");
+      navigate("/my-auctions");
     } catch (err) {
       alert("❌ Error: " + err.message);
     }
   };
-  const [imageUrl, setImageUrl] = useState(null);
-  const [imageError, setImageError] = useState(false); // Show error if no image
-  return (
-    <div className="auction-form-container">
-      <h2>Create Auction</h2>
 
-      <form onSubmit={handleSubmit}>
-        <div className="form-grid">
-          <div>
-            <input name="name" placeholder="Auction Name" onChange={handleChange} required/>
-            <input name="maxPeople" placeholder="Max People" onChange={handleChange} required/>
-            <input name="product" placeholder="Product" onChange={handleChange} required/>
-            <input name="category" placeholder="Category" onChange={handleChange} required/>
-          </div>
-          <div>
-            <textarea name="description" placeholder="Description" onChange={handleChange} required/>
-            <input name="startingPrice" placeholder="Starting Price" onChange={handleChange} required/>
-            <input name="stepPrice" placeholder="Step Price (Optional)" onChange={handleChange} />
-          </div>
-          <div>
-            <Uploadimage
-              onUploadComplete={(url) => {
-                if (url) {
-                  setImageUrl(url);
-                  setImageError(false);
-                }
-              }}
-            />
-            {imageError && (
-              <p style={{ color: "red", fontSize: "0.9rem" }}>
-                ❌ Please upload an image
-              </p>
-            )}
-          </div>
-          <label htmlFor="startTime">Start Time:</label>
-          <input type="datetime-local" name="startTime" onChange={handleDateTimeChange} required/>
-          <label htmlFor="endTime">End Time:</label>
-          <input type="datetime-local" id="endTime" name="endTime" onChange={handleDateTimeChange} required/>
-        </div>
+  return (
+    <div className="create-auction-container">
+      <h2>Create Auction</h2>
+      <form onSubmit={handleSubmit} className="form">
+        <label>Auction Name:</label>
+        <input name="name" onChange={handleChange} required />
+
+        <label>Max People:</label>
+        <input name="maxPeople" onChange={handleChange} required />
+
+        <label>Product:</label>
+        <input name="product" onChange={handleChange} required />
+
+        <label>Category:</label>
+        <input name="category" onChange={handleChange} required />
+
+        <label>Description:</label>
+        <textarea name="description" onChange={handleChange} required />
+
+        <label>Starting Price:</label>
+        <input name="startingPrice" onChange={handleChange} required />
+
+        <label>Step Price (Optional):</label>
+        <input name="stepPrice" onChange={handleChange} />
+
+        <label>Start Time:</label>
+        <input
+          type="datetime-local"
+          name="startTime"
+          onChange={handleDateTimeChange}
+          required
+        />
+
+        <label>End Time:</label>
+        <input
+          type="datetime-local"
+          name="endTime"
+          onChange={handleDateTimeChange}
+          required
+        />
+
+        <label>Upload Image:</label>
+        <input type="file" accept="image/*" onChange={handleImageChange} />
+        {imageError && (
+          <p className="error">❌ Please upload an image</p>
+        )}
 
         <button type="submit">Publish</button>
       </form>
