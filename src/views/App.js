@@ -5,9 +5,12 @@ import CreateAuctionPage from "../components/CreateAuctionPage";
 import ProfilePage from "../components/ProfilePage";
 import '../styles/Navbar.scss';
 import "@fortawesome/fontawesome-free/css/all.min.css";
-import MyAuctionsPage from "../components/MyAuctionPage";
+import MyAuctionsPage from "../components/MyAuctionsPage";
 import { collection, query, orderBy, onSnapshot, where } from "firebase/firestore";
 import { db } from "../Firebase";
+import "../styles/HomePage.scss";
+import Product from "../components/Products"
+import EditAuctionsPage from "../components/EditAuctionsPage";
 import "../styles/HomePage.scss";
 
 function App() {
@@ -85,6 +88,9 @@ function App() {
             <Route path="/profile" element={<ProfilePage />} />
             <Route path="/my-auctions" element={<MyAuctionsPage />} />
             <Route path="/auction/:id" element={<Product />} />
+            <Route path="/auction/edit-auction/:id" element={<EditAuctionsPage />} />
+
+
             <Route path="/" element={
               <div className="home-page-container">
                 <h2>Welcome to Online Auction</h2>
@@ -96,70 +102,112 @@ function App() {
                   <div className="auctions-section">
                     <h3>Upcoming Auctions</h3>
                     <div className="auctions-grid">
-                      {filteredAuctions.filter((auction) => upcomingAuctions.includes(auction)).map((auction) => (
-                        <Link to={`/auction/${auction.id}`} className="auction-link" key={auction.id}>
-                          <div className="auction-card">
-                            {auction.imageUrl && (<img src={auction.imageUrl} alt={auction.name} className="auction-image" />)}
-                            <h3>{auction.name}</h3>
-                            <p className="meta"> Product: {auction.product}</p>
-                            <p className="meta"> Category: {auction.category}</p>
-                            <p className="starting-price"> Starting Price: {auction.startingPrice} </p>
-                            <div className="time-section">
-                              {auction.startTime && (
-                                <p className="time">🕒 Start: {auction.startTime.toDate().toLocaleString("en-GB", {
-                                  day: "2-digit", month: "2-digit", year: "numeric",
-                                  hour: "2-digit", minute: "2-digit", second: "2-digit", hour12: false
-                                })}</p>
+                      {filteredAuctions
+                        .filter((auction) => upcomingAuctions.includes(auction))
+                        .map((auction) => (
+                          <Link to={`/auction/${auction.id}`} className="auction-link" key={auction.id}>
+                            <div className="auction-card">
+                              {auction.imageUrl && (
+                                <img src={auction.imageUrl} alt={auction.name} className="auction-image" />
                               )}
-                              {auction.endTime && (
-                                <p className="time">⏰ End: {auction.endTime.toDate().toLocaleString("en-GB", {
-                                  day: "2-digit", month: "2-digit", year: "numeric",
-                                  hour: "2-digit", minute: "2-digit", second: "2-digit", hour12: false
-                                })}</p>
-                              )}
+                              <h3>{auction.name}</h3>
+                              <p className="meta">Product: {auction.product}</p>
+                              <p className="meta">Category: {auction.category}</p>
+                              <p className="starting-price">Starting Price: {auction.startingPrice}</p>
+                              <div className="time-section">
+                                {auction.startTime && (
+                                  <p className="time">
+                                    🕒 Start:{" "}
+                                    {auction.startTime.toDate().toLocaleString("en-GB", {
+                                      day: "2-digit",
+                                      month: "2-digit",
+                                      year: "numeric",
+                                      hour: "2-digit",
+                                      minute: "2-digit",
+                                      second: "2-digit",
+                                      hour12: false,
+                                    })}
+                                  </p>
+                                )}
+                                {auction.endTime && (
+                                  <p className="time">
+                                    ⏰ End:{" "}
+                                    {auction.endTime.toDate().toLocaleString("en-GB", {
+                                      day: "2-digit",
+                                      month: "2-digit",
+                                      year: "numeric",
+                                      hour: "2-digit",
+                                      minute: "2-digit",
+                                      second: "2-digit",
+                                      hour12: false,
+                                    })}
+                                  </p>
+                                )}
+                              </div>
+                              <div className="detail-button">Detail</div>
                             </div>
-                            <div className="detail-button">Detail</div>
-                          </div>
-                        </Link>
-                      ))}
+                          </Link>
+                        ))}
                     </div>
                   </div>
                 )}
+
 
                 {/* Ongoing Auctions */}
                 {filteredAuctions.filter((auction) => ongoingAuctions.includes(auction)).length > 0 && (
                   <div className="auctions-section">
                     <h3>Ongoing Auctions</h3>
                     <div className="auctions-grid">
-                      {filteredAuctions.filter((auction) => ongoingAuctions.includes(auction)).map((auction) => (
-                        <Link to={`/auction/${auction.id}`} className="auction-link" key={auction.id}>
-                          <div className="auction-card">
-                            {auction.imageUrl && (<img src={auction.imageUrl} alt={auction.name} className="auction-image" />)}
-                            <h3>{auction.name}</h3>
-                            <p className="meta"> Product: {auction.product}</p>
-                            <p className="meta"> Category: {auction.category}</p>
-                            <p className="starting-price"> Starting Price: {auction.startingPrice} </p>
-                            <div className="time-section">
-                              {auction.startTime && (
-                                <p className="time">🕒 Start: {auction.startTime.toDate().toLocaleString("en-GB", {
-                                  day: "2-digit", month: "2-digit", year: "numeric",
-                                  hour: "2-digit", minute: "2-digit", second: "2-digit", hour12: false
-                                })}</p>
+                      {filteredAuctions
+                        .filter((auction) => ongoingAuctions.includes(auction))
+                        .map((auction) => (
+                          <Link to={`/auction/${auction.id}`} className="auction-link" key={auction.id}>
+                            <div className="auction-card">
+                              {auction.imageUrl && (
+                                <img src={auction.imageUrl} alt={auction.name} className="auction-image" />
                               )}
-                              {auction.endTime && (
-                                <p className="time">⏰ End: {auction.endTime.toDate().toLocaleString("en-GB", {
-                                  day: "2-digit", month: "2-digit", year: "numeric",
-                                  hour: "2-digit", minute: "2-digit", second: "2-digit", hour12: false
-                                })}</p>
-                              )}
+                              <h3>{auction.name}</h3>
+                              <p className="meta">Product: {auction.product}</p>
+                              <p className="meta">Category: {auction.category}</p>
+                              <p className="starting-price">Starting Price: {auction.startingPrice}</p>
+                              <div className="time-section">
+                                {auction.startTime && (
+                                  <p className="time">
+                                    🕒 Start:{" "}
+                                    {auction.startTime.toDate().toLocaleString("en-GB", {
+                                      day: "2-digit",
+                                      month: "2-digit",
+                                      year: "numeric",
+                                      hour: "2-digit",
+                                      minute: "2-digit",
+                                      second: "2-digit",
+                                      hour12: false,
+                                    })}
+                                  </p>
+                                )}
+                                {auction.endTime && (
+                                  <p className="time">
+                                    ⏰ End:{" "}
+                                    {auction.endTime.toDate().toLocaleString("en-GB", {
+                                      day: "2-digit",
+                                      month: "2-digit",
+                                      year: "numeric",
+                                      hour: "2-digit",
+                                      minute: "2-digit",
+                                      second: "2-digit",
+                                      hour12: false,
+                                    })}
+                                  </p>
+                                )}
+                              </div>
+                              <div className="detail-button">Detail</div>
                             </div>
-                            <div className="detail-button">Detail</div>
-                          </div>
-                        </Link>
-                      ))}
+                          </Link>
+                        ))}
                     </div>
                   </div>
                 )}
+
 
                 {/* No Auctions */}
                 {filteredAuctions.length === 0 && !loading && (
