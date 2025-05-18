@@ -18,7 +18,7 @@ export default function CreateAuctionPage() {
     endTime: "",
   });
 
-  const [imageUrl, setImageUrl] = useState(null);
+  const [imageUrls, setImageUrls] = useState([]);
   const [imageError, setImageError] = useState(false);
   const navigate = useNavigate();
 
@@ -32,38 +32,43 @@ export default function CreateAuctionPage() {
     setFormData((prev) => ({ ...prev, [name]: new Date(value) }));
   };
 
-  const handleImageChange = async (e) => {
-    const file = e.target.files[0];
-    if (!file) return;
+  const handleImageChange = (e) => {
+    const files = Array.from(e.target.files);
+    if (files.length === 0) return;
 
-    try {
-      const storage = getStorage();
+    setImageUrls(files);
+    setImageError(false);
+  };
+
+  const uploadImages = async () => {
+    const storage = getStorage();
+    const uploadPromises = imageUrls.map(async (file) => {
       const storageRef = ref(storage, `auction_images/${file.name}`);
       await uploadBytes(storageRef, file);
-      const downloadURL = await getDownloadURL(storageRef);
-      setImageUrl(downloadURL);
-      setImageError(false);
-    } catch (err) {
-      console.error("Image upload failed:", err);
-      setImageError(true);
-    }
-  };
+      return getDownloadURL(storageRef);
+    });
+
+    return Promise.all(uploadPromises);
+  }
 
   const handleSubmit = async (e) => {
     e.preventDefault();
 
-    if (!imageUrl) {
+    if (imageUrls.length === 0) {
       setImageError(true);
       return;
     }
 
     try {
+      const uploadedImageUrls = await uploadImages();
       const user = auth.currentUser;
       await addDoc(collection(db, "auctions"), {
         ...formData,
-        imageUrl,
         userId: user.uid,
+        imageUrls: uploadedImageUrls,
         createdAt: new Date(),
+        startingPrice: Number(formData.startingPrice), // <-- ensure number
+        stepPrice: formData.stepPrice ? Number(formData.stepPrice) : 1, // <-- ensure number
       });
       alert("✅ Auction created!");
       navigate("/my-auctions");
@@ -72,30 +77,37 @@ export default function CreateAuctionPage() {
     }
   };
 
+  const { name, maxPeople, product, category, description, startingPrice, stepPrice, startTime, endTime } = formData;
+
   return (
     <div className="create-auction-container">
       <h2>Create Auction</h2>
       <form onSubmit={handleSubmit} className="form">
         <label>Auction Name:</label>
-        <input name="name" onChange={handleChange} required />
+        <input name="name" value={name} onChange={handleChange} required />
 
         <label>Max People:</label>
-        <input name="maxPeople" onChange={handleChange} required />
+        <input name="maxPeople" value={maxPeople} onChange={handleChange} required />
 
         <label>Product:</label>
-        <input name="product" onChange={handleChange} required />
+        <input name="product" value={product} onChange={handleChange} required />
 
         <label>Category:</label>
-        <input name="category" onChange={handleChange} required />
+        <input name="category" value={category} onChange={handleChange} required />
 
         <label>Description:</label>
-        <textarea name="description" onChange={handleChange} required />
+        <textarea name="description" value={description} onChange={handleChange} required />
 
         <label>Starting Price:</label>
-        <input name="startingPrice" onChange={handleChange} required />
+        <input name="startingPrice" value={startingPrice} onChange={handleChange} required />
 
-        <label>Step Price (Optional):</label>
-        <input name="stepPrice" onChange={handleChange} />
+        <label>Step Price:</label>
+        <input
+          name="stepPrice"
+          value={stepPrice}
+          onChange={handleChange}
+          required
+        />
 
         <label>Start Time:</label>
         <input
@@ -114,7 +126,7 @@ export default function CreateAuctionPage() {
         />
 
         <label>Upload Image:</label>
-        <input type="file" accept="image/*" onChange={handleImageChange} />
+        <input type="file" accept="image/*" multiple onChange={handleImageChange} />
         {imageError && (
           <p className="error">❌ Please upload an image</p>
         )}

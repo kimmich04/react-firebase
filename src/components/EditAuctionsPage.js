@@ -61,6 +61,8 @@ export default function EditAuctionPage() {
 
       await updateDoc(doc(db, "auctions", id), {
         ...updatedData,
+        startingPrice: Number(updatedData.startingPrice), // <-- ensure number
+        stepPrice: updatedData.stepPrice ? Number(updatedData.stepPrice) : 1, // <-- ensure number
         startTime: new Date(updatedData.startTime),
         endTime: new Date(updatedData.endTime),
       });
