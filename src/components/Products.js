@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { doc, getDoc } from "firebase/firestore";
-import { db } from "../Firebase";
+import { auth,db } from "../Firebase";
 import "../styles/Products.scss";
 
 export default function Product() {

@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { getStorage, ref, uploadBytesResumable, getDownloadURL } from "firebase/storage";
 import { v4 as uuidv4 } from 'uuid';
 import "../styles/Uploadimage.scss";
+import { auth, db } from "../Firebase";
 
 function Uploadimage({ onUploadComplete }) {
   const [image, setImage] = useState(null);

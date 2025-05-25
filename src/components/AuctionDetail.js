@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from "react";
-import { useParams, useNavigate } from 'react-router-dom';
-import { doc, getDoc, collection, query, orderBy, getDocs, addDoc, setDoc, onSnapshot } from "firebase/firestore";
-import { db } from '../Firebase';
+import { useParams, useNavigate } from "react-router-dom";
+import {doc,getDoc,collection,query,orderBy,getDocs,addDoc,setDoc,onSnapshot,where,updateDoc,Timestamp} from "firebase/firestore";
+import { auth, db } from "../Firebase";
 import "../styles/AuctionDetail.scss";
 
 const AuctionDetail = ({ user }) => {
@@ -15,8 +15,8 @@ const AuctionDetail = ({ user }) => {
   const [bids, setBids] = useState([]);
   const [joined, setJoined] = useState(false);
   const [availableBids, setAvailableBids] = useState([]);
-  const [winner, setWinner] = useState(null);
   const [participants, setParticipants] = useState([]);
+  const [notifications, setNotifications] = useState([]);
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -29,8 +29,6 @@ const AuctionDetail = ({ user }) => {
           return;
         }
         const auctionData = auctionDoc.data();
-
-        // Ensure numeric types
         auctionData.startingPrice = Number(auctionData.startingPrice) || 0;
         auctionData.stepPrice =
           typeof auctionData.stepPrice === "number"
@@ -41,7 +39,7 @@ const AuctionDetail = ({ user }) => {
         auctionData.maxPeople = Number(auctionData.maxPeople) || 0;
 
         setAuction(auctionData);
-        setStepPrice(auctionData.stepPrice); // <-- Add this line
+        setStepPrice(auctionData.stepPrice);
       } catch (err) {
         setError("Error fetching auction data: " + err.message);
       } finally {
@@ -52,7 +50,6 @@ const AuctionDetail = ({ user }) => {
     fetchAuctionData();
   }, [id, user]);
 
-  // Real-time bids and highest bid
   useEffect(() => {
     if (!id || !auction) return;
     const bidsQuery = query(
@@ -67,7 +64,6 @@ const AuctionDetail = ({ user }) => {
       const highest = bidsData.length > 0
         ? Number(bidsData[0].amount)
         : Number(auction.startingPrice) || 0;
-
       setHighestBid(highest);
     });
     return () => unsubscribe();
@@ -82,18 +78,16 @@ const AuctionDetail = ({ user }) => {
       !isNaN(stepPrice) &&
       stepPrice > 0
     ) {
-      // Use highestBid if it's a valid number, otherwise use startingPrice
       const baseBid =
         typeof highestBid === "number" && !isNaN(highestBid) && highestBid >= auction.startingPrice
           ? highestBid
           : auction.startingPrice;
 
-      // Always show at least 10 options, all guaranteed to be numbers
-      const bidsArr = Array.from({ length: 10 }, (_, i) => baseBid + stepPrice + i * stepPrice)
+      const maxOptions = 200;
+      const bidsArr = Array.from({ length: maxOptions }, (_, i) => baseBid + stepPrice + i * stepPrice)
         .filter(bid => !isNaN(bid));
       setAvailableBids(bidsArr);
 
-      // Only update userBid if it's invalid
       if (userBid === null || userBid <= baseBid) {
         setUserBid(baseBid + stepPrice);
       }
@@ -101,9 +95,7 @@ const AuctionDetail = ({ user }) => {
   }, [auction, highestBid, stepPrice]);
 
   useEffect(() => {
-    // Reset joined state when user or auction changes
     setJoined(false);
-
     const checkParticipant = async () => {
       if (user && id) {
         const participantDoc = await getDoc(doc(db, "auctions", id, "participants", user.uid));
@@ -113,7 +105,6 @@ const AuctionDetail = ({ user }) => {
     checkParticipant();
   }, [user, id]);
 
-  // Listen for real-time participants updates
   useEffect(() => {
     const unsub = onSnapshot(
       collection(db, "auctions", id, "participants"),
@@ -124,8 +115,21 @@ const AuctionDetail = ({ user }) => {
     return () => unsub();
   }, [id]);
 
+  useEffect(() => {
+    if (!user) return;
+    const notificationsQuery = query(
+      collection(db, "notifications"),
+      where("userId", "==", user.uid),
+      orderBy("time", "desc")
+    );
+    const unsubscribe = onSnapshot(notificationsQuery, (snapshot) => {
+      const notificationsData = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+      setNotifications(notificationsData);
+    });
+    return () => unsubscribe();
+  }, [user]);
+
   const handleBid = async () => {
-    // Always check against latest highestBid
     if (userBid <= highestBid) {
       alert("Your bid must be higher than the current highest bid!");
       return;
@@ -133,11 +137,40 @@ const AuctionDetail = ({ user }) => {
     try {
       await addDoc(collection(db, "auctions", id, "bids"), {
         userId: user.uid,
+        username: user.displayName || "Unknown",
         amount: userBid,
-        timestamp: new Date(),
+        timestamp: Timestamp.now(),
       });
+
+      if (auction.userId !== user.uid) {
+        await addDoc(collection(db, "notifications"), {
+          userId: auction.userId,
+          message: `A new bid of ${userBid.toLocaleString('vi-VN')} VND was placed on your auction "${auction.name}" by ${user.displayName || "Unknown"}.`,
+          auctionId: id,
+          read: false,
+          time: Timestamp.now(),
+        });
+      }
+
+      const participantsSnapshot = await getDocs(collection(db, "auctions", id, "participants"));
+      const notifiedUserIds = new Set();
+      participantsSnapshot.forEach(docSnap => {
+        const participantsData = docSnap.data();
+        if (participantsData.userId !== user.uid && participantsData.userId !== auction.userId) {
+          notifiedUserIds.add(participantsData.userId);
+        }
+      });
+      for (const bidderId of notifiedUserIds) {
+        await addDoc(collection(db, "notifications"), {
+          userId: bidderId,
+          message: `A new bid of ${userBid.toLocaleString('vi-VN')} VND was placed on auction "${auction.name}".`,
+          auctionId: id,
+          read: false,
+          time: Timestamp.now(),
+        });
+      }
+
       alert("Bid placed successfully!");
-      // Don't update userBid here, let the onSnapshot handle it
     } catch (err) {
       setError("Error placing bid: " + err.message);
     }
@@ -149,16 +182,34 @@ const AuctionDetail = ({ user }) => {
       return;
     }
     try {
-      // This will create or update the participant document under the auction
-      await setDoc(doc(db, "auctions", id, "participants", user.uid), {
+      // Check if the user is already a participant
+      const participantRef = doc(db, "auctions", id, "participants", user.uid);
+      const participantDoc = await getDoc(participantRef);
+
+      if (participantDoc.exists()) {
+        alert("You have already joined this auction!");
+        return;
+      }
+
+      // Add the user as a participant
+      await setDoc(participantRef, {
         userId: user.uid,
-        joinedAt: new Date(),
+        joinedAt: Timestamp.now(),
       });
       setJoined(true);
       alert("You have joined the auction!");
+
+      // Notification creation is handled globally in AuctionNotifications.js
     } catch (err) {
       setError("Error joining auction: " + err.message);
     }
+  };
+
+  const handleMarkAllAsRead = async () => {
+    const unread = notifications.filter(n => !n.read);
+    await Promise.all(
+      unread.map(n => updateDoc(doc(db, "notifications", n.id), { read: true }))
+    );
   };
 
   if (loading) return <p>Loading auction details...</p>;
@@ -171,6 +222,28 @@ const AuctionDetail = ({ user }) => {
   const isOngoing =
     auction.startTime && auction.endTime &&
     auction.startTime.toDate() <= now && now <= auction.endTime.toDate();
+  const isEnded = auction.endTime && auction.endTime.toDate() < now;
+
+  if (isEnded) {
+    const highest = bids[0];
+    return (
+      <div className="auction-result-container">
+        <h2>Result for: {auction.name}</h2>
+        {highest ? (
+          <>
+            <p>
+              <strong>Winner:</strong> {highest.username || "Unknown"}
+            </p>
+            <p>
+              <strong>Winning Bid:</strong> {Number(highest.amount).toLocaleString('vi-VN')} VND
+            </p>
+          </>
+        ) : (
+          <p>No bids were placed. No winner.</p>
+        )}
+      </div>
+    );
+  }
 
   return (
     <div className="auction-detail-container">
@@ -183,10 +256,10 @@ const AuctionDetail = ({ user }) => {
         </div>
       ) : auction.imageUrl ? <img src={auction.imageUrl} alt={auction.name} style={{ maxWidth: '200px', maxHeight: '200px', margin: '10px' }} /> : null}
       <p><strong>Product:</strong> {auction.product}</p>
-      <p>Category: {auction.category}</p>
-      <p>Description: {auction.description}</p>
+      <p><strong>Category:</strong> {auction.category}</p>
+      <p><strong>Description: </strong>{auction.description}</p>
       <p>
-        Starting Price: {
+        <strong>Starting Price: </strong>{
           typeof auction.startingPrice === "number" && !isNaN(auction.startingPrice)
             ? new Intl.NumberFormat('vi-VN').format(auction.startingPrice)
             : 'N/A'
@@ -196,21 +269,21 @@ const AuctionDetail = ({ user }) => {
         joined ? (
           <div>
             <label htmlFor="bidAmount">
-              Your Bid (minimum {highestBid && stepPrice ? new Intl.NumberFormat('vi-VN').format(highestBid + stepPrice) : 'N/A'} VND):
+              <strong>Your Bid</strong> (minimum {highestBid && stepPrice ? new Intl.NumberFormat('vi-VN').format(highestBid + stepPrice) : 'N/A'} VND):
             </label>
             <select
               id="bidAmount"
               value={userBid}
               onChange={e => setUserBid(Number(e.target.value))}
             >
-              {availableBids.map((bidAmount) => (
+              {availableBids.map(bidAmount => (
                 <option key={bidAmount} value={bidAmount}>
                   {new Intl.NumberFormat('vi-VN').format(bidAmount)} VND
                 </option>
               ))}
             </select>
             <p>
-              Current Highest Bid: {
+              <strong>Current Highest Bid:</strong> {
                 bids.length > 0
                   ? Number(bids[0].amount).toLocaleString('vi-VN', { maximumFractionDigits: 0 })
                   : (auction && auction.startingPrice
@@ -219,7 +292,7 @@ const AuctionDetail = ({ user }) => {
               } VND
             </p>
             <p>
-              Step Price: {stepPrice ? new Intl.NumberFormat('vi-VN').format(stepPrice) : 'N/A'} VND
+             <strong> Step Price:</strong> {stepPrice ? new Intl.NumberFormat('vi-VN').format(stepPrice) : 'N/A'} VND
             </p>
             <button onClick={handleBid} disabled={userBid <= highestBid}>Place Bid</button>
           </div>
@@ -227,23 +300,14 @@ const AuctionDetail = ({ user }) => {
           <button onClick={handleJoin}>Join Auction</button>
         )
       )}
-
       {isFull && <p>This auction is full. No more participants can join.</p>}
-
-      {winner && (
-        <div>
-          <h3>Winner:</h3>
-          <p>User: {winner}</p>
-        </div>
-      )}
-
       {bids.length > 0 && (
         <div>
           <h3>Bids:</h3>
           <ul>
             {bids.map(bid => (
               <li key={bid.id}>
-                Amount: {Number(bid.amount).toLocaleString('vi-VN')} VND, Time: {bid.timestamp.toDate().toLocaleString("en-GB")}
+                User: {bid.username || "Unknown"} , Amount: {Number(bid.amount).toLocaleString('vi-VN')} VND, Time: {bid.timestamp.toDate().toLocaleString("en-GB")}
               </li>
             ))}
           </ul>

@@ -1,9 +1,10 @@
 import React, { useState } from "react";
-import { addDoc, collection } from "firebase/firestore";
+import { addDoc, collection, runTransaction, doc } from "firebase/firestore";
 import { db, auth } from "../Firebase";
 import { getStorage, ref, uploadBytes, getDownloadURL } from "firebase/storage";
 import { useNavigate } from "react-router-dom";
 import "../styles/CreateAuctionPage.scss";
+import { createNotification } from "../utils/notifications";
 
 export default function CreateAuctionPage() {
   const [formData, setFormData] = useState({
@@ -62,20 +63,36 @@ export default function CreateAuctionPage() {
     try {
       const uploadedImageUrls = await uploadImages();
       const user = auth.currentUser;
-      await addDoc(collection(db, "auctions"), {
-        ...formData,
-        userId: user.uid,
-        imageUrls: uploadedImageUrls,
-        createdAt: new Date(),
-        startingPrice: Number(formData.startingPrice), // <-- ensure number
-        stepPrice: formData.stepPrice ? Number(formData.stepPrice) : 1, // <-- ensure number
+
+      await runTransaction(db, async (transaction) => {
+        // Add the auction
+        const auctionRef = doc(collection(db, "auctions"));
+        transaction.set(auctionRef, {
+          ...formData,
+          userId: user.uid,
+          imageUrls: uploadedImageUrls,
+          createdAt: new Date(),
+          startingPrice: Number(formData.startingPrice),
+          stepPrice: formData.stepPrice ? Number(formData.stepPrice) : 1,
+        });
+
+        // Add the notification
+        await createNotification({
+          userId: user.uid,
+          message: `You created auction: ${formData.name}`,
+          auctionId: auctionRef.id,
+          type: "create-auction",
+        });
       });
+
       alert("✅ Auction created!");
       navigate("/my-auctions");
     } catch (err) {
       alert("❌ Error: " + err.message);
     }
+ 
   };
+
 
   const { name, maxPeople, product, category, description, startingPrice, stepPrice, startTime, endTime } = formData;
 

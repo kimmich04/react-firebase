@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { collection, getDocs, query, orderBy, doc, getDoc } from "firebase/firestore";
+import { collection, query, onSnapshot, doc, getDoc, Timestamp } from "firebase/firestore";
 import { db, auth } from "../Firebase";
 import "../styles/MyAuctionsPage.scss";
 import { useNavigate } from "react-router-dom";
@@ -13,20 +13,20 @@ export default function MyAuctionsPage({ searchTerm }) {
   const navigate = useNavigate();
 
   useEffect(() => {
-    let unsubscribe;
+    let unsubscribeAuth;
     setLoading(true);
 
-    unsubscribe = onAuthStateChanged(auth, async (user) => {
+    unsubscribeAuth = onAuthStateChanged(auth, (user) => {
       if (!user) {
         setAuctions([]);
         setLoading(false);
         return;
       }
 
-      try {
-        // 1. Get all auctions
-        const auctionsSnapshot = await getDocs(collection(db, "auctions"));
-        const allAuctions = auctionsSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+      // Real-time listener for auctions
+      const q = query(collection(db, "auctions"));
+      const unsubscribeAuctions = onSnapshot(q, async (snapshot) => {
+        const allAuctions = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
 
         // 2. Filter auctions where user is owner or participant
         const myAuctions = [];
@@ -51,14 +51,14 @@ export default function MyAuctionsPage({ searchTerm }) {
         });
 
         setAuctions(myAuctions);
-      } catch (err) {
-        setError("Error fetching auctions: " + err.message);
-      } finally {
         setLoading(false);
-      }
+      });
+
+      // Clean up Firestore listener on unmount or logout
+      return () => unsubscribeAuctions();
     });
 
-    return () => unsubscribe && unsubscribe();
+    return () => unsubscribeAuth && unsubscribeAuth();
   }, []);
 
   useEffect(() => {
@@ -251,3 +251,4 @@ export default function MyAuctionsPage({ searchTerm }) {
     </div>
   );
 }
+

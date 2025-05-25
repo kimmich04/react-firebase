@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
-import { doc, getDoc, updateDoc, deleteDoc } from "firebase/firestore";
-import { db } from "../Firebase";
+import { doc, onSnapshot, updateDoc, deleteDoc, Timestamp, getDoc } from "firebase/firestore";
+import { auth, db } from "../Firebase";
 import "../styles/EditAuctionsPage.scss";
 import { getStorage, ref, uploadBytes, getDownloadURL } from "firebase/storage";
 
@@ -11,29 +11,40 @@ export default function EditAuctionPage() {
   const [formData, setFormData] = useState({});
   const [imageFile, setImageFile] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [canEdit, setCanEdit] = useState(true); // State to control Edit button visibility
 
   useEffect(() => {
-    const fetchAuction = async () => {
-      try {
-        const docRef = doc(db, "auctions", id);
-        const docSnap = await getDoc(docRef);
-        if (docSnap.exists()) {
-          const data = docSnap.data();
-          setFormData({
-            ...data,
-            startTime: data.startTime?.toDate().toISOString().slice(0, 16),
-            endTime: data.endTime?.toDate().toISOString().slice(0, 16),
-          });
-        }
-      } catch (err) {
-        alert("Failed to fetch auction: " + err.message);
-      } finally {
-        setLoading(false);
-      }
-    };
+    const docRef = doc(db, "auctions", id);
 
-    fetchAuction();
-  }, [id]);
+    // Real-time listener for the auction document
+    const unsubscribe = onSnapshot(docRef, (docSnap) => {
+      if (docSnap.exists()) {
+        const data = docSnap.data();
+        const now = new Date().getTime(); // Current time in milliseconds
+        const startTime = data.startTime?.toDate ? data.startTime.toDate().getTime() : null;
+
+        console.log("Current Time (ms):", now);
+        console.log("Auction Start Time (ms):", startTime);
+
+        setFormData({
+          ...data,
+          startTime: startTime ? new Date(startTime).toISOString().slice(0, 16) : "",
+          endTime: data.endTime?.toDate ? data.endTime.toDate().toISOString().slice(0, 16) : "",
+        });
+
+        // Only allow editing if now is before startTime
+        const canEdit = startTime && now < startTime;
+        console.log("Can Edit:", canEdit);
+        setCanEdit(canEdit);
+      } else {
+        alert("Auction not found!");
+        navigate("/my-auctions");
+      }
+      setLoading(false);
+    });
+
+    return () => unsubscribe(); // Cleanup listener on unmount
+  }, [id, navigate]);
 
   const handleChange = (e) => {
     const { name, value } = e.target;
@@ -59,14 +70,35 @@ export default function EditAuctionPage() {
         updatedData.imageUrl = downloadURL;
       }
 
+      // Always convert startTime and endTime to Date, then to Timestamp
+      updatedData.startTime = Timestamp.fromDate(new Date(updatedData.startTime));
+      updatedData.endTime = Timestamp.fromDate(new Date(updatedData.endTime));
+
       await updateDoc(doc(db, "auctions", id), {
         ...updatedData,
-        startingPrice: Number(updatedData.startingPrice), // <-- ensure number
-        stepPrice: updatedData.stepPrice ? Number(updatedData.stepPrice) : 1, // <-- ensure number
-        startTime: new Date(updatedData.startTime),
-        endTime: new Date(updatedData.endTime),
+        startingPrice: Number(updatedData.startingPrice),
+        stepPrice: updatedData.stepPrice ? Number(updatedData.stepPrice) : 1,
       });
+
       alert("Auction updated successfully!");
+
+      // Force re-fetch of auction data
+      const docRef = doc(db, "auctions", id);
+      const docSnap = await getDoc(docRef);
+      if (docSnap.exists()) {
+        const data = docSnap.data();
+        const now = new Date().getTime();
+        const startTime = data.startTime?.toDate ? data.startTime.toDate().getTime() : null;
+
+        setFormData({
+          ...data,
+          startTime: startTime ? new Date(startTime).toISOString().slice(0, 16) : "",
+          endTime: data.endTime?.toDate ? data.endTime.toDate().toISOString().slice(0, 16) : "",
+        });
+
+        setCanEdit(startTime && now < startTime);
+      }
+
       navigate("/my-auctions");
     } catch (err) {
       alert("Failed to update auction: " + err.message);
@@ -90,59 +122,65 @@ export default function EditAuctionPage() {
   return (
     <div className="edit-auction-container">
       <h2>Edit Auction</h2>
-      <form className="edit-form" onSubmit={handleSubmit}>
-        {[
-          { label: "Auction Name", name: "name" },
-          { label: "Max People", name: "maxPeople" },
-          { label: "Product", name: "product" },
-          { label: "Category", name: "category" },
-          { label: "Starting Price", name: "startingPrice" },
-          { label: "Step Price (Optional)", name: "stepPrice" },
-        ].map(({ label, name }) => (
-          <div key={name} className="form-group">
-            <label>{label}:</label>
+      {canEdit ? (
+        <form className="edit-form" onSubmit={handleSubmit}>
+          {[
+            { label: "Auction Name", name: "name" },
+            { label: "Max People", name: "maxPeople" },
+            { label: "Product", name: "product" },
+            { label: "Category", name: "category" },
+            { label: "Starting Price", name: "startingPrice" },
+            { label: "Step Price (Optional)", name: "stepPrice" },
+          ].map(({ label, name }) => (
+            <div key={name} className="form-group">
+              <label>{label}:</label>
+              <input
+                type="text"
+                name={name}
+                value={formData[name] || ""}
+                onChange={handleChange}
+                required={name !== "stepPrice"}
+              />
+            </div>
+          ))}
+
+          <div className="form-group">
+            <label>Start Time:</label>
             <input
-              type="text"
-              name={name}
-              value={formData[name] || ""}
+              type="datetime-local"
+              name="startTime"
+              value={formData.startTime || ""}
               onChange={handleChange}
-              required={name !== "stepPrice"}
+              required
             />
           </div>
-        ))}
 
-        <div className="form-group">
-          <label>Start Time:</label>
-          <input
-            type="datetime-local"
-            name="startTime"
-            value={formData.startTime || ""}
-            onChange={handleChange}
-            required
-          />
-        </div>
+          <div className="form-group">
+            <label>End Time:</label>
+            <input
+              type="datetime-local"
+              name="endTime"
+              value={formData.endTime || ""}
+              onChange={handleChange}
+              required
+            />
+          </div>
 
-        <div className="form-group">
-          <label>End Time:</label>
-          <input
-            type="datetime-local"
-            name="endTime"
-            value={formData.endTime || ""}
-            onChange={handleChange}
-            required
-          />
-        </div>
+          <div className="form-group">
+            <label>Change Image:</label>
+            <input type="file" accept="image/*" onChange={handleImageChange} />
+          </div>
 
-        <div className="form-group">
-          <label>Change Image:</label>
-          <input type="file" accept="image/*" onChange={handleImageChange} />
-        </div>
-
-        <div className="button-group">
-          <button type="submit" className="save-button">Save Changes</button>
-          <button type="button" onClick={handleDelete} className="delete-button">Delete Auction</button>
-        </div>
-      </form>
+          <div className="button-group">
+            <button type="submit" className="save-button">Save Changes</button>
+            <button type="button" onClick={handleDelete} className="delete-button">Delete Auction</button>
+          </div>
+        </form>
+      ) : (
+        <p style={{ color: "red", textAlign: "center" }}>
+          Editing is disabled because the auction has already started.
+        </p>
+      )}
     </div>
   );
 }
