@@ -17,6 +17,9 @@ const AuctionDetail = ({ user }) => {
   const [availableBids, setAvailableBids] = useState([]);
   const [participants, setParticipants] = useState([]);
   const [notifications, setNotifications] = useState([]);
+  const [remainingTime, setRemainingTime] = useState("");
+  const [editPaymentStatus, setEditPaymentStatus] = useState(false);
+  const [localPaymentStatus, setLocalPaymentStatus] = useState("pending");
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -49,6 +52,34 @@ const AuctionDetail = ({ user }) => {
 
     fetchAuctionData();
   }, [id, user]);
+
+  useEffect(() => {
+    if (!id) return;
+    const unsub = onSnapshot(doc(db, "auctions", id), (auctionDoc) => {
+      if (!auctionDoc.exists()) {
+        setError("Auction not found.");
+        setLoading(false);
+        return;
+      }
+      const auctionData = auctionDoc.data();
+      auctionData.startingPrice = Number(auctionData.startingPrice) || 0;
+      auctionData.stepPrice =
+        typeof auctionData.stepPrice === "number"
+          ? auctionData.stepPrice
+          : (typeof auctionData.stepPrice === "string" && !isNaN(Number(auctionData.stepPrice)))
+            ? Number(auctionData.stepPrice)
+            : 1;
+      auctionData.maxPeople = Number(auctionData.maxPeople) || 0;
+
+      setAuction(auctionData);
+      setStepPrice(auctionData.stepPrice);
+      setLoading(false);
+    }, (err) => {
+      setError("Error fetching auction data: " + err.message);
+      setLoading(false);
+    });
+    return () => unsub();
+  }, [id]);
 
   useEffect(() => {
     if (!id || !auction) return;
@@ -130,6 +161,17 @@ const AuctionDetail = ({ user }) => {
   }, [user]);
 
   const handleBid = async () => {
+    // Fetch user ban status
+    const userRef = doc(db, "users", user.uid);
+    const userSnap = await getDoc(userRef);
+    if (userSnap.exists()) {
+      const userData = userSnap.data();
+      if (userData.bannedUntil && userData.bannedUntil.toDate() > new Date()) {
+        alert("You are banned from bidding until " + userData.bannedUntil.toDate().toLocaleString());
+        return;
+      }
+    }
+
     if (userBid <= highestBid) {
       alert("Your bid must be higher than the current highest bid!");
       return;
@@ -181,6 +223,18 @@ const AuctionDetail = ({ user }) => {
       navigate("/login");
       return;
     }
+
+    // Ban check
+    const userRef = doc(db, "users", user.uid);
+    const userSnap = await getDoc(userRef);
+    if (userSnap.exists()) {
+      const userData = userSnap.data();
+      if (userData.bannedUntil && userData.bannedUntil.toDate() > new Date()) {
+        alert("You are banned from joining auctions until " + userData.bannedUntil.toDate().toLocaleString());
+        return;
+      }
+    }
+
     try {
       // Check if the user is already a participant
       const participantRef = doc(db, "auctions", id, "participants", user.uid);
@@ -212,6 +266,71 @@ const AuctionDetail = ({ user }) => {
     );
   };
 
+  useEffect(() => {
+    if (!auction || !auction.endTime) return;
+
+    const updateRemaining = () => {
+      const now = new Date();
+      const end = auction.endTime.toDate();
+      const diff = end - now;
+
+      if (diff <= 0) {
+        setRemainingTime("Auction ended");
+        return;
+      }
+
+      const hours = Math.floor(diff / (1000 * 60 * 60));
+      const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
+      const seconds = Math.floor((diff % (1000 * 60)) / 1000);
+
+      setRemainingTime(
+        `${hours}h ${minutes}m ${seconds}s`
+      );
+    };
+
+    updateRemaining();
+    const interval = setInterval(updateRemaining, 1000);
+    return () => clearInterval(interval);
+  }, [auction]);
+
+  useEffect(() => {
+    if (!auction || !id || auction.status === "ended") return;
+
+    const now = new Date();
+    const end = auction.endTime && auction.endTime.toDate();
+    if (!end) return;
+
+    const msUntilEnd = end - now;
+    if (msUntilEnd > 0) {
+      const timeoutId = setTimeout(async () => {
+        try {
+          await updateDoc(doc(db, "auctions", id), { status: "ended" });
+        } catch (err) {
+          // Optionally handle error
+          console.error("Failed to update auction status:", err);
+        }
+      }, msUntilEnd);
+
+      return () => clearTimeout(timeoutId);
+    }
+  }, [auction, id]);
+
+  useEffect(() => {
+    if (auction && auction.paymentStatus) {
+      setLocalPaymentStatus(auction.paymentStatus);
+    }
+  }, [auction]);
+
+  const handlePaymentStatusChange = (e) => {
+    setLocalPaymentStatus(e.target.value);
+    setEditPaymentStatus(true);
+  };
+
+  const handleSavePaymentStatus = async () => {
+    await updateDoc(doc(db, "auctions", id), { paymentStatus: localPaymentStatus });
+    setEditPaymentStatus(false);
+  };
+
   if (loading) return <p>Loading auction details...</p>;
   if (error) return <p style={{ color: "red" }}>{error}</p>;
   if (!auction) return null;
@@ -226,6 +345,17 @@ const AuctionDetail = ({ user }) => {
 
   if (isEnded) {
     const highest = bids[0];
+    const isWinner = user && highest && highest.userId === user.uid;
+    const isAuctioneer = user && auction.userId === user.uid;
+    const showPayment =
+      (isWinner || isAuctioneer) && highest;
+
+    // Payment status and deadline fallback
+    const paymentStatus = auction.paymentStatus || "pending";
+    const paymentDeadline = auction.paymentDeadline
+      ? auction.paymentDeadline.toDate().toLocaleString("en-GB")
+      : "N/A";
+
     return (
       <div className="auction-result-container">
         <h2>Result for: {auction.name}</h2>
@@ -237,6 +367,57 @@ const AuctionDetail = ({ user }) => {
             <p>
               <strong>Winning Bid:</strong> {Number(highest.amount).toLocaleString('vi-VN')} VND
             </p>
+            {showPayment && (
+              <div style={{ marginTop: "20px" }}>
+                <p>
+                  <strong>Payment Status:</strong>{" "}
+                  {isAuctioneer ? (
+                    auction.paymentStatus === "approved" ? (
+                      <span>Approved</span>
+                    ) : (
+                      <>
+                        <select
+                          value={localPaymentStatus}
+                          onChange={handlePaymentStatusChange}
+                          disabled={
+                            auction.paymentStatus === "approved" ||
+                            (auction.paymentDeadline &&
+                              auction.paymentDeadline.toDate() < new Date())
+                          }
+                        >
+                          <option value="pending">Pending</option>
+                          <option value="approved">Approved</option>
+                        </select>
+                        {editPaymentStatus && localPaymentStatus === "approved" && (
+                          <button
+                            onClick={handleSavePaymentStatus}
+                            style={{ marginLeft: 8 }}
+                            disabled={
+                              auction.paymentStatus === "approved" ||
+                              (auction.paymentDeadline &&
+                                auction.paymentDeadline.toDate() < new Date())
+                            }
+                          >
+                            Save
+                          </button>
+                        )}
+                      </>
+                    )
+                  ) : (
+                    <span>
+                      {(auction.paymentStatus
+                        ? auction.paymentStatus.charAt(0).toUpperCase() +
+                          auction.paymentStatus.slice(1)
+                        : "Pending")}
+                    </span>
+                  )}
+                </p>
+                <p>
+                  <strong>Payment Deadline:</strong>{" "}
+                  <span>{paymentDeadline}</span>
+                </p>
+              </div>
+            )}
           </>
         ) : (
           <p>No bids were placed. No winner.</p>
@@ -265,6 +446,11 @@ const AuctionDetail = ({ user }) => {
             : 'N/A'
         } VND
       </p>
+      <p><strong>Max People:</strong> {auction.maxPeople || "N/A"}</p>
+      <p><strong>Start Time:</strong> {auction.startTime ? auction.startTime.toDate().toLocaleString("en-GB") : "N/A"}</p>
+      <p><strong>End Time:</strong> {auction.endTime ? auction.endTime.toDate().toLocaleString("en-GB") : "N/A"}</p>
+      <p><strong>Remaining Time:</strong> {remainingTime}</p>
+      <p><strong>Payment Deadline:</strong> {auction.paymentDeadline ? auction.paymentDeadline.toDate().toLocaleString("en-GB") : "N/A"}</p>
       {user && !isOwner && !isFull && isOngoing && (
         joined ? (
           <div>
@@ -301,7 +487,7 @@ const AuctionDetail = ({ user }) => {
         )
       )}
       {isFull && <p>This auction is full. No more participants can join.</p>}
-      {bids.length > 0 && (
+      {joined && bids.length > 0 && (
         <div>
           <h3>Bids:</h3>
           <ul>
