@@ -17,7 +17,8 @@ export default function CreateAuctionPage() {
     stepPrice: "",
     startTime: "",
     endTime: "",
-    paymentDeadline: "", // <-- Add this line
+    paymentDeadline: "",
+    paymentInfo: "", // <-- Add this line
   });
 
   const [imageUrls, setImageUrls] = useState([]);
@@ -122,7 +123,8 @@ export default function CreateAuctionPage() {
           stepPrice: formData.stepPrice ? Number(formData.stepPrice) : 1,
           startTime: new Date(formData.startTime),
           endTime: new Date(formData.endTime),
-          paymentDeadline: new Date(formData.paymentDeadline), // <-- Add this line
+          paymentDeadline: new Date(formData.paymentDeadline),
+          paymentInfo: formData.paymentInfo, // <-- Add this line
         });
 
         // Add the notification
@@ -171,6 +173,14 @@ export default function CreateAuctionPage() {
         <input
           name="stepPrice"
           value={stepPrice}
+          onChange={handleChange}
+          required
+        />
+
+        <label>Payment Information:</label>
+        <textarea
+          name="paymentInfo"
+          value={formData.paymentInfo}
           onChange={handleChange}
           required
         />

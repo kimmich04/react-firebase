@@ -55,13 +55,12 @@ const AuctionNotifications = () => {
             });
           }
 
-          // Notify all participants
           for (const userId of participantUserIds) {
             if (winnerBid && userId === winnerUserId) {
               // Winner
               await createNotification({
                 userId,
-                message: `Congratulations! You won the auction "${auction.name}" with a bid of ${Number(winningAmount).toLocaleString('vi-VN')} VND.`,
+                message: `Congratulations! You won the auction "${auction.name}" with a bid of ${Number(winningAmount).toLocaleString('vi-VN')} VND. Please proceed payment to avoid being banned.`,
                 auctionId,
                 type: "auction-ended-win",
               });
@@ -76,6 +75,20 @@ const AuctionNotifications = () => {
                 type: "auction-ended-lose",
               });
             }
+          }
+
+          // Fallback: If winner is not in participants, notify them
+          if (
+            winnerBid &&
+            winnerUserId &&
+            !participantUserIds.includes(winnerUserId)
+          ) {
+            await createNotification({
+              userId: winnerUserId,
+              message: `Congratulations! You won the auction "${auction.name}" with a bid of ${Number(winningAmount).toLocaleString('vi-VN')} VND, Please proceed payment to avoid being banned`,
+              auctionId,
+              type: "auction-ended-win",
+            });
           }
         }
 

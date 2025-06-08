@@ -83,166 +83,179 @@ export default function MyAuctionsPage({ searchTerm }) {
       <div className="my-auctions-header">
         <h2>My Auctions</h2>
       </div>
-      <h3>Created Auctions</h3>
-      <div className="auctions-grid">
-        {filteredAuctions
-          .filter(a => a.userId === auth.currentUser?.uid)
-          .map((auction) => {
-            const now = new Date();
-            const start = auction.startTime?.toDate();
-            const canEdit = start && now < start;
 
-            return (
-              <div
-                key={auction.id}
-                className="auction-card"
-                onClick={() => navigate(`/auction/${auction.id}`)}
-              >
-                {auction.imageUrls && auction.imageUrls.length > 0 ? (
-                  <img
-                    src={auction.imageUrls[0]}
-                    alt={auction.name}
-                    className="auction-image"
-                  />
-                ) : auction.imageUrl && (
-                  <img src={auction.imageUrl} alt={auction.name} className="auction-image" />
-                )}
+      {/* Created Auctions */}
+      {filteredAuctions.some(a => a.userId === auth.currentUser?.uid) && (
+        <>
+          <h3>Created Auctions</h3>
+          <div className="auctions-grid">
+            {filteredAuctions
+              .filter(a => a.userId === auth.currentUser?.uid)
+              .map((auction) => {
+                const now = new Date();
+                const start = auction.startTime?.toDate();
+                const canEdit = start && now < start;
 
-                <h3>{auction.name}</h3>
-                <p className="meta"> Product: {auction.product}</p>
-                <p className="meta"> Category: {auction.category}</p>
-                <p className="starting-price">
-                  Starting Price: {auction.startingPrice
-                    ? `${new Intl.NumberFormat('vi-VN').format(Number(auction.startingPrice))} VND`
-                    : 'N/A'}
-                </p>
-
-                <div className="time-section">
-                  {auction.startTime && (
-                    <p className="time">
-                      🕒 Start: {auction.startTime.toDate().toLocaleString("en-GB", {
-                        day: "2-digit",
-                        month: "2-digit",
-                        year: "numeric",
-                        hour: "2-digit",
-                        minute: "2-digit",
-                        second: "2-digit",
-                        hour12: false,
-                      })}
-                    </p>
-                  )}
-                  {auction.endTime && (
-                    <p className="time">
-                      ⏰ End: {auction.endTime.toDate().toLocaleString("en-GB", {
-                        day: "2-digit",
-                        month: "2-digit",
-                        year: "numeric",
-                        hour: "2-digit",
-                        minute: "2-digit",
-                        second: "2-digit",
-                        hour12: false,
-                      })}
-                    </p>
-                  )}
-                </div>
-
-                <div className="detail-button">Detail</div>
-
-                {canEdit && (
+                return (
                   <div
-                    className="edit-button"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      navigate(`/auction/edit-auction/${auction.id}`);
-                    }}
+                    key={auction.id}
+                    className="auction-card"
+                    onClick={() => navigate(`/auction/${auction.id}`)}
                   >
-                    Edit
+                    {auction.imageUrls && auction.imageUrls.length > 0 ? (
+                      <img
+                        src={auction.imageUrls[0]}
+                        alt={auction.name}
+                        className="auction-image"
+                      />
+                    ) : auction.imageUrl && (
+                      <img src={auction.imageUrl} alt={auction.name} className="auction-image" />
+                    )}
+
+                    <h3>{auction.name}</h3>
+                    <p className="meta"> Product: {auction.product}</p>
+                    <p className="meta"> Category: {auction.category}</p>
+                    <p className="starting-price">
+                      Starting Price: {auction.startingPrice
+                        ? `${new Intl.NumberFormat('vi-VN').format(Number(auction.startingPrice))} VND`
+                        : 'N/A'}
+                    </p>
+
+                    <div className="time-section">
+                      {auction.startTime && (
+                        <p className="time">
+                          🕒 Start: {auction.startTime.toDate().toLocaleString("en-GB", {
+                            day: "2-digit",
+                            month: "2-digit",
+                            year: "numeric",
+                            hour: "2-digit",
+                            minute: "2-digit",
+                            second: "2-digit",
+                            hour12: false,
+                          })}
+                        </p>
+                      )}
+                      {auction.endTime && (
+                        <p className="time">
+                          ⏰ End: {auction.endTime.toDate().toLocaleString("en-GB", {
+                            day: "2-digit",
+                            month: "2-digit",
+                            year: "numeric",
+                            hour: "2-digit",
+                            minute: "2-digit",
+                            second: "2-digit",
+                            hour12: false,
+                          })}
+                        </p>
+                      )}
+                    </div>
+
+                    <div className="detail-button">Detail</div>
+
+                    {canEdit && (
+                      <div
+                        className="edit-button"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          navigate(`/auction/edit-auction/${auction.id}`);
+                        }}
+                      >
+                        Edit
+                      </div>
+                    )}
                   </div>
-                )}
-              </div>
-            );
-          })}
-      </div>
-      <h3>Joined Auctions</h3>
-      <div className="auctions-grid">
-        {filteredAuctions
-          .filter(a => a.userId !== auth.currentUser?.uid)
-          .map((auction) => {
-            const now = new Date();
-            const start = auction.startTime?.toDate();
-            const canEdit = start && now < start;
+                );
+              })}
+          </div>
+        </>
+      )}
 
-            return (
-              <div
-                key={auction.id}
-                className="auction-card"
-                onClick={() => navigate(`/auction/${auction.id}`)}
-              >
-                {auction.imageUrls && auction.imageUrls.length > 0 ? (
-                  <img
-                    src={auction.imageUrls[0]}
-                    alt={auction.name}
-                    className="auction-image"
-                  />
-                ) : auction.imageUrl && (
-                  <img src={auction.imageUrl} alt={auction.name} className="auction-image" />
-                )}
+      {/* Joined Auctions */}
+      {filteredAuctions.some(a => a.userId !== auth.currentUser?.uid) && (
+        <>
+          <h3>Joined Auctions</h3>
+          <div className="auctions-grid">
+            {filteredAuctions
+              .filter(a => a.userId !== auth.currentUser?.uid)
+              .map((auction) => {
+                const now = new Date();
+                const start = auction.startTime?.toDate();
+                const canEdit = start && now < start;
 
-                <h3>{auction.name}</h3>
-                <p className="meta"> Product: {auction.product}</p>
-                <p className="meta"> Category: {auction.category}</p>
-                <p className="starting-price">
-                  Starting Price: {auction.startingPrice
-                    ? `${new Intl.NumberFormat('vi-VN').format(Number(auction.startingPrice))} VND`
-                    : 'N/A'}
-                </p>
-
-                <div className="time-section">
-                  {auction.startTime && (
-                    <p className="time">
-                      🕒 Start: {auction.startTime.toDate().toLocaleString("en-GB", {
-                        day: "2-digit",
-                        month: "2-digit",
-                        year: "numeric",
-                        hour: "2-digit",
-                        minute: "2-digit",
-                        second: "2-digit",
-                        hour12: false,
-                      })}
-                    </p>
-                  )}
-                  {auction.endTime && (
-                    <p className="time">
-                      ⏰ End: {auction.endTime.toDate().toLocaleString("en-GB", {
-                        day: "2-digit",
-                        month: "2-digit",
-                        year: "numeric",
-                        hour: "2-digit",
-                        minute: "2-digit",
-                        second: "2-digit",
-                        hour12: false,
-                      })}
-                    </p>
-                  )}
-                </div>
-
-                <div className="detail-button">Detail</div>
-
-                {canEdit && (
+                return (
                   <div
-                    className="edit-button"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      navigate(`/auction/edit-auction/${auction.id}`);
-                    }}
+                    key={auction.id}
+                    className="auction-card"
+                    onClick={() => navigate(`/auction/${auction.id}`)}
                   >
-                    Edit
+                    {auction.imageUrls && auction.imageUrls.length > 0 ? (
+                      <img
+                        src={auction.imageUrls[0]}
+                        alt={auction.name}
+                        className="auction-image"
+                      />
+                    ) : auction.imageUrl && (
+                      <img src={auction.imageUrl} alt={auction.name} className="auction-image" />
+                    )}
+
+                    <h3>{auction.name}</h3>
+                    <p className="meta"> Product: {auction.product}</p>
+                    <p className="meta"> Category: {auction.category}</p>
+                    <p className="starting-price">
+                      Starting Price: {auction.startingPrice
+                        ? `${new Intl.NumberFormat('vi-VN').format(Number(auction.startingPrice))} VND`
+                        : 'N/A'}
+                    </p>
+
+                    <div className="time-section">
+                      {auction.startTime && (
+                        <p className="time">
+                          🕒 Start: {auction.startTime.toDate().toLocaleString("en-GB", {
+                            day: "2-digit",
+                            month: "2-digit",
+                            year: "numeric",
+                            hour: "2-digit",
+                            minute: "2-digit",
+                            second: "2-digit",
+                            hour12: false,
+                          })}
+                        </p>
+                      )}
+                      {auction.endTime && (
+                        <p className="time">
+                          ⏰ End: {auction.endTime.toDate().toLocaleString("en-GB", {
+                            day: "2-digit",
+                            month: "2-digit",
+                            year: "numeric",
+                            hour: "2-digit",
+                            minute: "2-digit",
+                            second: "2-digit",
+                            hour12: false,
+                          })}
+                        </p>
+                      )}
+                    </div>
+
+                    <div className="detail-button">Detail</div>
+
+                    {canEdit && (
+                      <div
+                        className="edit-button"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          navigate(`/auction/edit-auction/${auction.id}`);
+                        }}
+                      >
+                        Edit
+                      </div>
+                    )}
                   </div>
-                )}
-              </div>
-            );
-          })}
-      </div>
+                );
+              })}
+          </div>
+        </>
+      )}
+
       {!loading && filteredAuctions.length === 0 && (
         <p style={{ textAlign: "center", color: "#888" }}>
           You have not joined or created any auctions yet.
