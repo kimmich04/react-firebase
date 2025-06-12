@@ -213,6 +213,16 @@ const AuctionDetail = ({ user }) => {
       }
 
       alert("Bid placed successfully!");
+
+      // After placing a bid successfully
+      const participantRef = doc(db, "auctions", id, "participants", user.uid);
+      const participantDoc = await getDoc(participantRef);
+      if (!participantDoc.exists()) {
+        await setDoc(participantRef, {
+          userId: user.uid,
+          joinedAt: Timestamp.now(),
+        });
+      }
     } catch (err) {
       setError("Error placing bid: " + err.message);
     }
@@ -412,6 +422,11 @@ const AuctionDetail = ({ user }) => {
                     </span>
                   )}
                 </p>
+                {auction.paymentInfo && (
+                  <p>
+                    <strong>Payment Information:</strong> {auction.paymentInfo}
+                  </p>
+                )}
                 <p>
                   <strong>Payment Deadline:</strong>{" "}
                   <span>{paymentDeadline}</span>
