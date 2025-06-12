@@ -9,14 +9,24 @@ body {
   align-items: center;
   gap: 40px;
   padding: 10px 20px;
-  background-color: #f2f2f2;
+  // fallback for very old browsers
+  background-color: #0f0f3c;
+
+  // main gradient
+  background-image: linear-gradient(
+    to right,
+    #0f0f3c 20%,  
+    #0000ff 90%, 
+    rgb(164, 148, 233) 95%, 
+    #ffffff 100%  
+  );
 
   .logo {
     margin-left: 100px;
 
     a {
       text-decoration: none;
-      color: inherit;
+      color: white;
       font-weight: bold;
     }
   }
@@ -25,13 +35,13 @@ body {
     list-style: none;
     display: flex;
     gap: 40px;
-    font-weight: bold;
+    //font-weight: bold;
     margin-left: 150px;
 
     li {
       cursor: pointer;
       transition: color 0.3s ease;
-
+      color: white;
       &:hover {
         color: red;
       }
@@ -51,13 +61,13 @@ body {
 
     .time {
       font-size: 1.2rem;
-      font-weight: bold;
-      color: #333;
+      //font-weight: bold;
+      color: white;
     }
 
     .date {
       font-size: 1rem;
-      color: #555;
+      color: white;
     }
   }
 
@@ -123,12 +133,13 @@ body {
         display: flex;
         align-items: center;
         justify-content: center;
-        font-weight: bold;
+        //font-weight: bold;
         font-size: 1.2rem;
       }
 
       .username {
-        font-weight: bold;
+        //font-weight: bold;
+        color: white;
       }
     }
 
@@ -167,12 +178,12 @@ body {
 
   .navbar-notification {
     font-size: 1.3em;
-    color: #333;
+    color: white;
     transition: color 0.2s;
     position: relative;
 
     &:hover {
-      color: #007bff;
+      color: red;
     }
   }
 
@@ -263,5 +274,9 @@ body {
 .main-content {
   display: flex;
   justify-content: space-around;
-  padding: 20px;
+  //padding: 20px;
+}
+
+.home-page-container {
+  color: black;
 }

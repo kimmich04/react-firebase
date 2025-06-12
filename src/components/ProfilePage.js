@@ -65,7 +65,7 @@ export default function ProfilePage() {
           <input
             name="username"
             value={editData.username || ""}
-            onChange={handleChange}
+            //onChange={handleChange}
             placeholder="Username"
           />
           <input

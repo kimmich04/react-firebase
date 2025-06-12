@@ -146,75 +146,77 @@ export default function CreateAuctionPage() {
   const { name, maxPeople, product, category, description, startingPrice, stepPrice, startTime, endTime, paymentDeadline } = formData;
 
   return (
-    <div className="create-auction-container">
-      <h2>Create Auction</h2>
-      <form onSubmit={handleSubmit} className="form">
-        <label>Auction Name:</label>
-        <input name="name" value={name} onChange={handleChange} required />
+    <div className="create-auction-page"> 
+      <div className="create-auction-container">
+        <h2>Create Auction</h2>
+        <form onSubmit={handleSubmit} className="form">
+          <label>Auction Name:</label>
+          <input name="name" value={name} onChange={handleChange} required />
 
-        <label>Max People:</label>
-        <input name="maxPeople" value={maxPeople} onChange={handleChange} required />
+          <label>Max People:</label>
+          <input name="maxPeople" value={maxPeople} onChange={handleChange} required />
 
-        <label>Product:</label>
-        <input name="product" value={product} onChange={handleChange} required />
+          <label>Product:</label>
+          <input name="product" value={product} onChange={handleChange} required />
 
-        <label>Category:</label>
-        <input name="category" value={category} onChange={handleChange} required />
+          <label>Category:</label>
+          <input name="category" value={category} onChange={handleChange} required />
 
-        <label>Description:</label>
-        <textarea name="description" value={description} onChange={handleChange} required />
+          <label>Description:</label>
+          <textarea name="description" value={description} onChange={handleChange} required />
 
-        <label>Starting Price:</label>
-        <input name="startingPrice" value={startingPrice} onChange={handleChange} required />
+          <label>Starting Price:</label>
+          <input name="startingPrice" value={startingPrice} onChange={handleChange} required />
 
-        <label>Step Price:</label>
-        <input
-          name="stepPrice"
-          value={stepPrice}
-          onChange={handleChange}
-          required
-        />
+          <label>Step Price:</label>
+          <input
+            name="stepPrice"
+            value={stepPrice}
+            onChange={handleChange}
+            required
+          />
 
-        <label>Start Time:</label>
-        <input
-          type="datetime-local"
-          name="startTime"
-          onChange={handleDateTimeChange}
-          required
-        />
+          <label>Start Time:</label>
+          <input
+            type="datetime-local"
+            name="startTime"
+            onChange={handleDateTimeChange}
+            required
+          />
 
-        <label>End Time:</label>
-        <input
-          type="datetime-local"
-          name="endTime"
-          onChange={handleDateTimeChange}
-          required
-        />
+          <label>End Time:</label>
+          <input
+            type="datetime-local"
+            name="endTime"
+            onChange={handleDateTimeChange}
+            required
+          />
 
-        <label>Payment Deadline:</label>
-        <input
-          type="datetime-local"
-          name="paymentDeadline"
-          onChange={handleDateTimeChange}
-          required
-        />
+          <label>Payment Deadline:</label>
+          <input
+            type="datetime-local"
+            name="paymentDeadline"
+            onChange={handleDateTimeChange}
+            required
+          />
 
-        <label>Upload Image:</label>
-        <input type="file" accept="image/*" multiple onChange={handleImageChange} />
-        {imageError && (
-          <p className="error">❌ Please upload an image</p>
-        )}
-
-        <button type="submit">Publish</button>
-      </form>
-      {isBanned && (
-        <p style={{ color: "red" }}>
-          You are banned from creating auctions until your ban expires.
-          {banRemaining && (
-            <> (Remaining: {banRemaining})</>
+          <label>Upload Image:</label>
+          <input type="file" accept="image/*" multiple onChange={handleImageChange} />
+          {imageError && (
+            <p className="error">❌ Please upload an image</p>
           )}
-        </p>
-      )}
+
+          <button type="submit">Publish</button>
+        </form>
+        {isBanned && (
+          <p style={{ color: "red" }}>
+            You are banned from creating auctions until your ban expires.
+            {banRemaining && (
+              <> (Remaining: {banRemaining})</>
+            )}
+          </p>
+        )}
+      </div>
     </div>
   );
 }

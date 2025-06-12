@@ -1,8 +1,26 @@
+// full-screen behind-the-card
+.create-auction-page {
+  width: 100vw;
+  // if your navbar sits above it, subtract its height:
+  min-height: calc(100vh - 60px);
+  padding-top: 60px;            // push content below navbar
+  display: flex;
+  justify-content: center;      // center the white card
+  background: linear-gradient(
+    to right,
+    #0f0f3c 20%,  
+    #0000ff 90%, 
+    rgb(164, 148, 233) 95%, 
+    #ffffff 100%  
+  );
+}
+
 .create-auction-container {
   max-width: 600px;
   margin: 50px auto;
   padding: 30px 40px;
-  background: #ffffff;
+  background: rgba(255,255,255,0.15);
+  
   border-radius: 10px;
   box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
 }
@@ -10,7 +28,7 @@
 h2 {
   text-align: center;
   margin-bottom: 25px;
-  color: #003fb3;
+  color: white;
 }
 
 .form {
@@ -20,7 +38,7 @@ h2 {
 
   label {
     font-weight: bold;
-    color: #333;
+    color: white;
   }
 
   input,
