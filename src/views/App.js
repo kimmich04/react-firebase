@@ -6,12 +6,13 @@ import ProfilePage from "../components/ProfilePage";
 import "../styles/Navbar.scss";
 import "@fortawesome/fontawesome-free/css/all.min.css";
 import MyAuctionsPage from "../components/MyAuctionsPage";
-import { collection, query, orderBy, onSnapshot } from "firebase/firestore";
+import { collection, query, orderBy, onSnapshot, getDoc, doc } from "firebase/firestore";
 import { db, auth } from "../Firebase";
 import "../styles/HomePage.scss";
 import AuctionDetail from "../components/AuctionDetail";
 import EditAuctionsPage from "../components/EditAuctionsPage";
 import AuctionNotifications from "../components/AuctionNotifications"; 
+import { onAuthStateChanged } from "firebase/auth";
 
 function App({ time, onTimeUpdate }) {
   const [upcomingAuctions, setUpcomingAuctions] = useState([]);
@@ -21,6 +22,8 @@ function App({ time, onTimeUpdate }) {
   const [error, setError] = useState(null);
   const [searchTerm, setSearchTerm] = useState("");
   const [filteredAuctions, setFilteredAuctions] = useState([]);
+  const [isBanned, setIsBanned] = useState(false);
+  const [banRemaining, setBanRemaining] = useState("");
 
   const categorizeAuctions = (fetchedAuctions) => {
     const now = new Date();
@@ -111,6 +114,40 @@ function App({ time, onTimeUpdate }) {
     }
   }, [searchTerm, upcomingAuctions, ongoingAuctions]);
 
+  useEffect(() => {
+    let unsubscribe;
+    unsubscribe = onAuthStateChanged(auth, async (user) => {
+      if (user) {
+        const userRef = doc(db, "users", user.uid);
+        const userSnap = await getDoc(userRef);
+        if (userSnap.exists()) {
+          const bannedUntil = userSnap.data().bannedUntil;
+          if (bannedUntil && bannedUntil.toDate() > new Date()) {
+            setIsBanned(true);
+            // Calculate remaining time
+            const now = new Date();
+            const diffMs = bannedUntil.toDate() - now;
+            const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24));
+            const diffHours = Math.floor((diffMs / (1000 * 60 * 60)) % 24);
+            const diffMinutes = Math.floor((diffMs / (1000 * 60)) % 60);
+            let msg = "";
+            if (diffDays > 0) msg += `${diffDays} day${diffDays > 1 ? "s" : ""} `;
+            if (diffHours > 0) msg += `${diffHours} hour${diffHours > 1 ? "s" : ""} `;
+            if (diffMinutes > 0) msg += `${diffMinutes} minute${diffMinutes > 1 ? "s" : ""}`;
+            setBanRemaining(msg.trim());
+          } else {
+            setIsBanned(false);
+            setBanRemaining("");
+          }
+        }
+      } else {
+        setIsBanned(false);
+        setBanRemaining("");
+      }
+    });
+    return () => unsubscribe && unsubscribe();
+  }, []);
+
   if (loading) return <p>Loading auctions...</p>;
   if (error) return <p style={{ color: "red" }}>{error}</p>;
 
@@ -135,7 +172,14 @@ function App({ time, onTimeUpdate }) {
 
             <Route path="/" element={
               <div className="home-page-container">
-                <h2>Welcome to Online Auction</h2>
+                <h2 style={{ color: "#222", fontWeight: "bold" }}>Welcome to Online Auction</h2>
+                {isBanned && (
+                  <p style={{ color: "red", marginTop: 8 }}>
+                    You are banned from creating auctions until your ban expires.
+                    {banRemaining && <> (Remaining: {banRemaining})</>}
+                  </p>
+                )}
+
                 <div className="home-page-button"></div>
 
                 {/* Upcoming Auctions */}

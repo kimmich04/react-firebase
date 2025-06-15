@@ -133,8 +133,8 @@ export default function Navbar({ onSearchChange, onTimeUpdate }) {
 
       {!currentUser ? (
         <>
-          <button className="login-button" onClick={() => setAuthMode("login")}>Login</button>
-          <button className="sign-up-button" onClick={() => setAuthMode("signup")}>Sign up</button>
+          <button className="auth-button" onClick={() => setAuthMode("login")}>Login</button>
+          <button className="auth-button" onClick={() => setAuthMode("signup")}>Sign up</button>
         </>
       ) : (
         <div
@@ -178,7 +178,15 @@ export default function Navbar({ onSearchChange, onTimeUpdate }) {
         {/* Notification popup */}
         {showNotifications && (
           <div className="notification-popup">
-            <div className="notification-header">Notifications</div>
+            <div className="notification-header" style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+              <span>Notifications</span>
+              <button
+                onClick={handleMarkAllAsRead}
+                style={{ fontSize: "12px", padding: "4px 8px", marginLeft: "8px" }}
+              >
+                Mark all as read
+              </button>
+            </div>
             <ul className="notification-list">
               {uniqueNotifications.length === 0 && (
                 <li className="notification-empty">No notifications</li>
@@ -205,11 +213,6 @@ export default function Navbar({ onSearchChange, onTimeUpdate }) {
                 </li>
               ))}
             </ul>
-            <div className="notification-footer">
-              <button onClick={handleMarkAllAsRead}>
-                Mark all as read
-              </button>
-            </div>
           </div>
         )}
       </div>
