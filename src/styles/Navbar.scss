@@ -21,14 +21,20 @@ body {
     #ffffff 100%  
   );
 
-  .logo {
-    margin-left: 100px;
+  // .logo {
+  //   margin-left: 100px;
 
-    a {
-      text-decoration: none;
-      color: white;
-      font-weight: bold;
-    }
+  //   a {
+  //     text-decoration: none;
+  //     color: white;
+  //     font-weight: bold;
+  //   }
+  // }
+
+  .logo-image {
+    margin-left: 100px;
+    height: 50px;    // pick whatever fits your design
+    width: auto;     // keep aspect-ratio
   }
 
   .nav-links {

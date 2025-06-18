@@ -5,6 +5,7 @@ import { Link, useNavigate } from "react-router-dom";
 import { auth, db } from "../Firebase";
 import { onAuthStateChanged, signOut } from "firebase/auth";
 import { collection, onSnapshot, query, where, doc, getDoc, addDoc, orderBy, updateDoc } from "firebase/firestore";
+import logo from "../images/logo2.jpg";
 
 export default function Navbar({ onSearchChange, onTimeUpdate }) {
   const [time, setTime] = useState(new Date());
@@ -23,7 +24,7 @@ export default function Navbar({ onSearchChange, onTimeUpdate }) {
       const newTime = new Date();
       setTime(newTime);
       if (onTimeUpdate) {
-        onTimeUpdate(newTime); // Pass the updated time to App.js
+        onTimeUpdate(newTime);
       }
     }, 1000);
     return () => clearInterval(timer);
@@ -37,8 +38,7 @@ export default function Navbar({ onSearchChange, onTimeUpdate }) {
     return () => unsubscribe();
   }, []);
 
-  
-  // Fetch notifications from "notifications" collection
+  // Fetch notifications
   useEffect(() => {
     if (!currentUser) return;
     const q = query(
@@ -95,10 +95,9 @@ export default function Navbar({ onSearchChange, onTimeUpdate }) {
     await Promise.all(
       unread.map(n => updateDoc(doc(db, "notifications", n.id), { read: true }))
     );
-    // No need to update local state, onSnapshot will update it in real time
   };
 
-  // Filter notifications to ensure uniqueness by ID
+  // Ensure unique notifications
   const uniqueNotifications = Array.from(
     new Map(notifications.map(n => [n.id, n])).values()
   );
@@ -106,7 +105,9 @@ export default function Navbar({ onSearchChange, onTimeUpdate }) {
   return (
     <nav className="navbar">
       <div className="logo">
-        <Link to="/">Online Auction PC Hardware</Link>
+        <Link to="/">
+          <img src={logo} alt="Logo" className="logo-image" />
+        </Link>
       </div>
 
       <ul className="nav-links">
@@ -164,7 +165,6 @@ export default function Navbar({ onSearchChange, onTimeUpdate }) {
       )}
 
       <div className="navbar-user-section">
-        {/* Notification bell icon with badge */}
         <span
           className="navbar-notification"
           style={{ marginLeft: "12px", cursor: "pointer", position: "relative" }}
@@ -175,7 +175,6 @@ export default function Navbar({ onSearchChange, onTimeUpdate }) {
             <span className="notification-badge">{unreadCount}</span>
           )}
         </span>
-        {/* Notification popup */}
         {showNotifications && (
           <div className="notification-popup">
             <div className="notification-header" style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
@@ -223,4 +222,3 @@ export default function Navbar({ onSearchChange, onTimeUpdate }) {
     </nav>
   );
 }
-

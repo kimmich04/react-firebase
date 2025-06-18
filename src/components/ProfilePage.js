@@ -1,13 +1,17 @@
 import React, { useEffect, useState } from "react";
 import { auth, db } from "../Firebase";
 import { doc, getDoc, updateDoc } from "firebase/firestore";
-import { updateProfile } from "firebase/auth";
+import { updateProfile, updatePassword, reauthenticateWithCredential, EmailAuthProvider } from "firebase/auth";
 import "../styles/ProfilePage.scss";
 
 export default function ProfilePage() {
   const [userInfo, setUserInfo] = useState(null);
   const [editData, setEditData] = useState({});
+  const [currentPassword, setCurrentPassword] = useState("");
+  const [newPassword, setNewPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
   const [message, setMessage] = useState("");
+  const [error, setError] = useState("");
 
   const user = auth.currentUser;
 
@@ -35,23 +39,55 @@ export default function ProfilePage() {
 
   const handleSave = async () => {
     if (!user) return;
+    setError("");
+    setMessage("");
+
+    // Handle password change
+    if (newPassword) {
+      if (!currentPassword) {
+        setError("❌ Please enter your current password.");
+        return;
+      }
+      if (newPassword !== confirmPassword) {
+        setError("❌ New passwords do not match.");
+        return;
+      }
+      try {
+        // Reauthenticate
+        const cred = EmailAuthProvider.credential(
+          user.email,
+          currentPassword
+        );
+        await reauthenticateWithCredential(user, cred);
+        // Update
+        await updatePassword(user, newPassword);
+      } catch (pwError) {
+        console.error("Error updating password:", pwError);
+        setError("❌ Failed to update password. Please check your current password.");
+        return;
+      }
+    }
 
     try {
       const ref = doc(db, "users", user.uid);
       await updateDoc(ref, {
         ...editData,
-        lastChanged: new Date(), // Save last changed tim
+        lastChanged: new Date(),
       });
 
-      await updateProfile(auth.currentUser, {
+      await updateProfile(user, {
         displayName: editData.username || "",
       });
 
-      await auth.currentUser.reload();
+      await user.reload();
       setMessage("✅ Changes saved!");
-    } catch (error) {
-      console.error("Error updating profile:", error);
-      setMessage("❌ Failed to save changes.");
+      // Clear password fields
+      setCurrentPassword("");
+      setNewPassword("");
+      setConfirmPassword("");
+    } catch (err) {
+      console.error("Error updating profile:", err);
+      setError("❌ Failed to save changes.");
     }
   };
 
@@ -65,7 +101,7 @@ export default function ProfilePage() {
           <input
             name="username"
             value={editData.username || ""}
-            //onChange={handleChange}
+            onChange={handleChange}
             placeholder="Username"
           />
           <input
@@ -135,8 +171,29 @@ export default function ProfilePage() {
             placeholder="Address"
           />
 
+          {/* Password change fields */}
+          <input
+            type="password"
+            placeholder="Current Password"
+            value={currentPassword}
+            onChange={(e) => setCurrentPassword(e.target.value)}
+          />
+          <input
+            type="password"
+            placeholder="New Password"
+            value={newPassword}
+            onChange={(e) => setNewPassword(e.target.value)}
+          />
+          <input
+            type="password"
+            placeholder="Confirm New Password"
+            value={confirmPassword}
+            onChange={(e) => setConfirmPassword(e.target.value)}
+          />
+
           <button onClick={handleSave}>Save Changes</button>
           {message && <p className="success-message">{message}</p>}
+          {error && <p className="error-message">{error}</p>}
         </div>
       ) : (
         <p>Loading your information...</p>
