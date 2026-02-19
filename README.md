@@ -12,7 +12,7 @@ Web link: https://first-project-2b259.web.app
 
 ---
 
-### Start Bidding
+### Start Bidding, Notifications
 
 [![Watch the demo](https://img.youtube.com/vi/tZBjsTnsr5w/0.jpg)](https://www.youtube.com/watch?v=tZBjsTnsr5w)
 
