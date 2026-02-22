@@ -1,6 +1,11 @@
-**Note:** Since Firebase Dynamic Links shut down on August 25, 2025, the *email verification* feature does not function correctly on the deployed site. The application is demonstrated in the video using the local `localhost` environment without that feature.
+**Note:** Since Firebase Dynamic Links shut down on August 25, 2025, the *email verification* feature does not function correctly on the deployed site. Current version of the web application does not use that feature.
 
 Web link: https://first-project-2b259.web.app
+Test account:
+user1: bidder@gmail.com
+password: 123456
+user2: bidder2@gmail.com
+password: 123456
 
 ## 🎥 Demo Videos
 
