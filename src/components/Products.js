@@ -1,11 +1,16 @@
 import React, { useEffect, useState } from "react";
-import { useNavigate, useParams } from "react-router-dom";
-import { doc, getDoc } from "firebase/firestore";
-import { auth,db } from "../Firebase";
+import { useParams } from "react-router-dom";
 import "../styles/Products.scss";
+import { api } from "../services/api";
+
+function toDateSafe(x) {
+  if (!x) return null;
+  const d = new Date(x);
+  return Number.isNaN(d.getTime()) ? null : d;
+}
 
 export default function Product() {
-  const { id } = useParams(); 
+  const { id } = useParams();
   const [auction, setAuction] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -13,12 +18,8 @@ export default function Product() {
   useEffect(() => {
     const fetchAuction = async () => {
       try {
-        const docSnap = await getDoc(doc(db, "auctions", id));
-        if (docSnap.exists()) {
-          setAuction(docSnap.data());
-        } else {
-          setError("Auction not found");
-        }
+        const data = await api.getAuction(id);
+        setAuction(data.auction);
       } catch (err) {
         setError("Error fetching auction: " + err.message);
       } finally {
@@ -36,7 +37,7 @@ export default function Product() {
   return (
     <div className="product-container">
       <div className="product-image">
-        <img src={auction.imageUrl} alt={auction.name} />
+        <img src={auction.imageUrl || auction.imageUrls?.[0]} alt={auction.name} />
       </div>
       <div className="product-details">
         <h2>{auction.name}</h2>
@@ -44,10 +45,9 @@ export default function Product() {
         <p><strong>Product:</strong> {auction.product}</p>
         <p><strong>Category:</strong> {auction.category}</p>
         <p><strong>Description:</strong> {auction.description}</p>
-        <p><strong>Start Time:</strong> {auction.startTime?.toDate().toLocaleString("en-GB")}</p>
-        <p><strong>End Time:</strong> {auction.endTime?.toDate().toLocaleString("en-GB")}</p>
+        <p><strong>Start Time:</strong> {toDateSafe(auction.startTime)?.toLocaleString("en-GB")}</p>
+        <p><strong>End Time:</strong> {toDateSafe(auction.endTime)?.toLocaleString("en-GB")}</p>
       </div>
     </div>
-
   );
 }

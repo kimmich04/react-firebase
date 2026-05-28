@@ -1,82 +1,71 @@
-import React, { useState, useEffect } from "react";
-import { collection, query, onSnapshot, doc, getDoc, Timestamp } from "firebase/firestore";
-import { db, auth } from "../Firebase";
+import React, { useState, useEffect, useMemo } from "react";
 import "../styles/MyAuctionsPage.scss";
 import { useNavigate } from "react-router-dom";
-import { onAuthStateChanged } from "firebase/auth";
+import { onIdTokenChanged } from "firebase/auth";
+import { auth } from "../Firebase";
+import { api } from "../services/api";
+
+function toDateSafe(x) {
+  if (!x) return null;
+  const d = new Date(x);
+  return Number.isNaN(d.getTime()) ? null : d;
+}
 
 export default function MyAuctionsPage({ searchTerm }) {
+  const [uid, setUid] = useState(null);
   const [auctions, setAuctions] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(null);
-  const [filteredAuctions, setFilteredAuctions] = useState([]);
+  const [error, setError] = useState("");
   const navigate = useNavigate();
 
   useEffect(() => {
-    let unsubscribeAuth;
-    setLoading(true);
+    const unsub = onIdTokenChanged(auth, async (user) => {
+      setError("");
 
-    unsubscribeAuth = onAuthStateChanged(auth, (user) => {
       if (!user) {
+        setUid(null);
         setAuctions([]);
         setLoading(false);
         return;
       }
 
-      // Real-time listener for auctions
-      const q = query(collection(db, "auctions"));
-      const unsubscribeAuctions = onSnapshot(q, async (snapshot) => {
-        const allAuctions = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+      setUid(user.uid);
 
-        // 2. Filter auctions where user is owner or participant
-        const myAuctions = [];
-        for (const auction of allAuctions) {
-          if (auction.userId === user.uid) {
-            myAuctions.push(auction);
-            continue;
-          }
-          // Check if user is a participant
-          const participantDoc = await getDoc(doc(db, "auctions", auction.id, "participants", user.uid));
-          if (participantDoc.exists()) {
-            myAuctions.push(auction);
-          }
-        }
+      try {
+        setLoading(true);
 
-        // Sort by createdAt descending if available
-        myAuctions.sort((a, b) => {
-          if (a.createdAt && b.createdAt) {
-            return b.createdAt.seconds - a.createdAt.seconds;
-          }
-          return 0;
-        });
+        // IMPORTANT: force refresh token so backend gets a valid JWT
+        await user.getIdToken(true);
 
-        setAuctions(myAuctions);
+        const data = await api.getMyAuctions();
+        setAuctions(data?.auctions || []);
+      } catch (e) {
+        console.error("getMyAuctions failed:", e);
+        setAuctions([]);
+        setError(e?.message || "Failed to load your auctions.");
+      } finally {
         setLoading(false);
-      });
-
-      // Clean up Firestore listener on unmount or logout
-      return () => unsubscribeAuctions();
+      }
     });
 
-    return () => unsubscribeAuth && unsubscribeAuth();
+    return () => unsub();
   }, []);
 
-  useEffect(() => {
-    if (searchTerm) {
-      const filtered = auctions.filter((auction) => {
-        return (
-          auction.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-          auction.product.toLowerCase().includes(searchTerm.toLowerCase())
-        );
-      });
-      setFilteredAuctions(filtered);
-    } else {
-      setFilteredAuctions(auctions);
-    }
-  }, [searchTerm, auctions]);
+  const filteredAuctions = useMemo(() => {
+    if (!searchTerm) return auctions;
+    const term = searchTerm.toLowerCase();
+    return auctions.filter(
+      (a) =>
+        (a.name || "").toLowerCase().includes(term) ||
+        (a.product || "").toLowerCase().includes(term)
+    );
+  }, [auctions, searchTerm]);
 
   if (loading) return <p>Loading auctions...</p>;
   if (error) return <p style={{ color: "red" }}>{error}</p>;
+
+  const created = filteredAuctions.filter((a) => a.userId === uid);
+  const joined = filteredAuctions.filter((a) => a.userId !== uid);
 
   return (
     <div className="my-auctions-container">
@@ -84,179 +73,136 @@ export default function MyAuctionsPage({ searchTerm }) {
         <h2>My Auctions</h2>
       </div>
 
-      {/* Created Auctions */}
-      {filteredAuctions.some(a => a.userId === auth.currentUser?.uid) && (
+      {created.length > 0 && (
         <>
           <h3>Created Auctions</h3>
           <div className="auctions-grid">
-            {filteredAuctions
-              .filter(a => a.userId === auth.currentUser?.uid)
-              .map((auction) => {
-                const now = new Date();
-                const start = auction.startTime?.toDate();
-                const canEdit = start && now < start;
+            {created.map((auction) => {
+              const now = new Date();
+              const start = toDateSafe(auction.startTime);
+              const canEdit = start && now < start;
 
-                return (
-                  <div
-                    key={auction.id}
-                    className="auction-card"
-                    onClick={() => navigate(`/auction/${auction.id}`)}
-                  >
-                    {auction.imageUrls && auction.imageUrls.length > 0 ? (
-                      <img
-                        src={auction.imageUrls[0]}
-                        alt={auction.name}
-                        className="auction-image"
-                      />
-                    ) : auction.imageUrl && (
-                      <img src={auction.imageUrl} alt={auction.name} className="auction-image" />
+              return (
+                <div
+                  key={auction.id}
+                  className="auction-card"
+                  onClick={() => navigate(`/auction/${auction.id}`)}
+                >
+                  {auction.imageUrls?.length ? (
+                    <img
+                      src={auction.imageUrls[0]}
+                      alt={auction.name}
+                      className="auction-image"
+                    />
+                  ) : auction.imageUrl ? (
+                    <img
+                      src={auction.imageUrl}
+                      alt={auction.name}
+                      className="auction-image"
+                    />
+                  ) : null}
+
+                  <h3>{auction.name}</h3>
+                  <p className="meta">Product: {auction.product}</p>
+                  <p className="meta">Category: {auction.category}</p>
+
+                  <p className="starting-price">
+                    Starting Price:{" "}
+                    {auction.startingPrice
+                      ? `${new Intl.NumberFormat("vi-VN").format(
+                          Number(auction.startingPrice)
+                        )} VND`
+                      : "N/A"}
+                  </p>
+
+                  <div className="time-section">
+                    {start && (
+                      <p className="time">
+                        🕒 Start:{" "}
+                        {start.toLocaleString("en-GB", {
+                          day: "2-digit",
+                          month: "2-digit",
+                          year: "numeric",
+                          hour: "2-digit",
+                          minute: "2-digit",
+                          second: "2-digit",
+                          hour12: false,
+                        })}
+                      </p>
                     )}
 
-                    <h3>{auction.name}</h3>
-                    <p className="meta"> Product: {auction.product}</p>
-                    <p className="meta"> Category: {auction.category}</p>
-                    <p className="starting-price">
-                      Starting Price: {auction.startingPrice
-                        ? `${new Intl.NumberFormat('vi-VN').format(Number(auction.startingPrice))} VND`
-                        : 'N/A'}
-                    </p>
-
-                    <div className="time-section">
-                      {auction.startTime && (
-                        <p className="time">
-                          🕒 Start: {auction.startTime.toDate().toLocaleString("en-GB", {
-                            day: "2-digit",
-                            month: "2-digit",
-                            year: "numeric",
-                            hour: "2-digit",
-                            minute: "2-digit",
-                            second: "2-digit",
-                            hour12: false,
-                          })}
-                        </p>
-                      )}
-                      {auction.endTime && (
-                        <p className="time">
-                          ⏰ End: {auction.endTime.toDate().toLocaleString("en-GB", {
-                            day: "2-digit",
-                            month: "2-digit",
-                            year: "numeric",
-                            hour: "2-digit",
-                            minute: "2-digit",
-                            second: "2-digit",
-                            hour12: false,
-                          })}
-                        </p>
-                      )}
-                    </div>
-
-                    <div className="detail-button">Detail</div>
-
-                    {canEdit && (
-                      <div
-                        className="edit-button"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          navigate(`/auction/edit-auction/${auction.id}`);
-                        }}
-                      >
-                        Edit
-                      </div>
+                    {auction.endTime && (
+                      <p className="time">
+                        ⏰ End:{" "}
+                        {toDateSafe(auction.endTime)?.toLocaleString("en-GB", {
+                          day: "2-digit",
+                          month: "2-digit",
+                          year: "numeric",
+                          hour: "2-digit",
+                          minute: "2-digit",
+                          second: "2-digit",
+                          hour12: false,
+                        })}
+                      </p>
                     )}
                   </div>
-                );
-              })}
+
+                  <div className="detail-button">Detail</div>
+
+                  {canEdit && (
+                    <div
+                      className="edit-button"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        navigate(`/auction/edit-auction/${auction.id}`);
+                      }}
+                    >
+                      Edit
+                    </div>
+                  )}
+                </div>
+              );
+            })}
           </div>
         </>
       )}
 
-      {/* Joined Auctions */}
-      {filteredAuctions.some(a => a.userId !== auth.currentUser?.uid) && (
+      {joined.length > 0 && (
         <>
           <h3>Joined Auctions</h3>
           <div className="auctions-grid">
-            {filteredAuctions
-              .filter(a => a.userId !== auth.currentUser?.uid)
-              .map((auction) => {
-                const now = new Date();
-                const start = auction.startTime?.toDate();
-                const canEdit = start && now < start;
+            {joined.map((auction) => (
+              <div
+                key={auction.id}
+                className="auction-card"
+                onClick={() => navigate(`/auction/${auction.id}`)}
+              >
+                {auction.imageUrls?.length ? (
+                  <img
+                    src={auction.imageUrls[0]}
+                    alt={auction.name}
+                    className="auction-image"
+                  />
+                ) : auction.imageUrl ? (
+                  <img
+                    src={auction.imageUrl}
+                    alt={auction.name}
+                    className="auction-image"
+                  />
+                ) : null}
 
-                return (
-                  <div
-                    key={auction.id}
-                    className="auction-card"
-                    onClick={() => navigate(`/auction/${auction.id}`)}
-                  >
-                    {auction.imageUrls && auction.imageUrls.length > 0 ? (
-                      <img
-                        src={auction.imageUrls[0]}
-                        alt={auction.name}
-                        className="auction-image"
-                      />
-                    ) : auction.imageUrl && (
-                      <img src={auction.imageUrl} alt={auction.name} className="auction-image" />
-                    )}
+                <h3>{auction.name}</h3>
+                <p className="meta">Product: {auction.product}</p>
+                <p className="meta">Category: {auction.category}</p>
 
-                    <h3>{auction.name}</h3>
-                    <p className="meta"> Product: {auction.product}</p>
-                    <p className="meta"> Category: {auction.category}</p>
-                    <p className="starting-price">
-                      Starting Price: {auction.startingPrice
-                        ? `${new Intl.NumberFormat('vi-VN').format(Number(auction.startingPrice))} VND`
-                        : 'N/A'}
-                    </p>
-
-                    <div className="time-section">
-                      {auction.startTime && (
-                        <p className="time">
-                          🕒 Start: {auction.startTime.toDate().toLocaleString("en-GB", {
-                            day: "2-digit",
-                            month: "2-digit",
-                            year: "numeric",
-                            hour: "2-digit",
-                            minute: "2-digit",
-                            second: "2-digit",
-                            hour12: false,
-                          })}
-                        </p>
-                      )}
-                      {auction.endTime && (
-                        <p className="time">
-                          ⏰ End: {auction.endTime.toDate().toLocaleString("en-GB", {
-                            day: "2-digit",
-                            month: "2-digit",
-                            year: "numeric",
-                            hour: "2-digit",
-                            minute: "2-digit",
-                            second: "2-digit",
-                            hour12: false,
-                          })}
-                        </p>
-                      )}
-                    </div>
-
-                    <div className="detail-button">Detail</div>
-
-                    {canEdit && (
-                      <div
-                        className="edit-button"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          navigate(`/auction/edit-auction/${auction.id}`);
-                        }}
-                      >
-                        Edit
-                      </div>
-                    )}
-                  </div>
-                );
-              })}
+                <div className="detail-button">Detail</div>
+              </div>
+            ))}
           </div>
         </>
       )}
 
-      {!loading && filteredAuctions.length === 0 && (
+      {created.length === 0 && joined.length === 0 && (
         <p style={{ textAlign: "center", color: "#888" }}>
           You have not joined or created any auctions yet.
         </p>
@@ -264,4 +210,3 @@ export default function MyAuctionsPage({ searchTerm }) {
     </div>
   );
 }
-

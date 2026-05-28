@@ -6,13 +6,21 @@ import ProfilePage from "../components/ProfilePage";
 import "../styles/Navbar.scss";
 import "@fortawesome/fontawesome-free/css/all.min.css";
 import MyAuctionsPage from "../components/MyAuctionsPage";
-import { collection, query, orderBy, onSnapshot, getDoc, doc } from "firebase/firestore";
-import { db, auth } from "../Firebase";
 import "../styles/HomePage.scss";
 import AuctionDetail from "../components/AuctionDetail";
 import EditAuctionsPage from "../components/EditAuctionsPage";
-import AuctionNotifications from "../components/AuctionNotifications"; 
+import AuctionNotifications from "../components/AuctionNotifications";
 import { onAuthStateChanged } from "firebase/auth";
+import { auth } from "../Firebase";
+import { api } from "../services/api";
+
+function toDateSafe(x) {
+  if (!x) return null;
+  if (x instanceof Date) return x;
+  // if backend sends ISO string or millis
+  const d = new Date(x);
+  return Number.isNaN(d.getTime()) ? null : d;
+}
 
 function App({ time, onTimeUpdate }) {
   const [upcomingAuctions, setUpcomingAuctions] = useState([]);
@@ -29,57 +37,45 @@ function App({ time, onTimeUpdate }) {
     const now = new Date();
     const upcoming = [];
     const ongoing = [];
-    const past = [];
 
     fetchedAuctions.forEach((auction) => {
       if (!auction.startTime || !auction.endTime) return;
 
-      let startTime, endTime;
-      try {
-        startTime = typeof auction.startTime.toDate === "function"
-          ? auction.startTime.toDate()
-          : new Date(auction.startTime);
-        endTime = typeof auction.endTime.toDate === "function"
-          ? auction.endTime.toDate()
-          : new Date(auction.endTime);
-      } catch {
-        return;
-      }
+      const startTime = toDateSafe(auction.startTime);
+      const endTime = toDateSafe(auction.endTime);
+      if (!startTime || !endTime) return;
 
-      if (startTime > now) {
-        upcoming.push(auction);
-      } else if (startTime <= now && endTime > now) {
-        ongoing.push(auction);
-      } else if (endTime <= now) {
-        past.push(auction);
-      }
+      if (startTime > now) upcoming.push(auction);
+      else if (startTime <= now && endTime > now) ongoing.push(auction);
     });
 
-    console.log("Upcoming:", upcoming, "Ongoing:", ongoing, "Past:", past);
     return { upcoming, ongoing };
   };
 
-  // Firestore listener to fetch all auctions
+  // Fetch auctions (polling)
   useEffect(() => {
-    const q = query(collection(db, "auctions"), orderBy("createdAt", "desc"));
+    let alive = true;
 
-    const unsubscribe = onSnapshot(
-      q,
-      (querySnapshot) => {
-        const fetchedAuctions = querySnapshot.docs.map((doc) => ({
-          id: doc.id,
-          ...doc.data(),
-        }));
-        setAllAuctions(fetchedAuctions); // Only update allAuctions
+    const load = async () => {
+      try {
+        setError(null);
+        const data = await api.listAuctions();
+        if (!alive) return;
+        setAllAuctions(data.auctions || []);
         setLoading(false);
-      },
-      (error) => {
-        setError("Error fetching auctions: " + error.message);
+      } catch (e) {
+        if (!alive) return;
+        setError("Error fetching auctions: " + e.message);
         setLoading(false);
       }
-    );
+    };
 
-    return () => unsubscribe();
+    load();
+    const id = setInterval(load, 15000);
+    return () => {
+      alive = false;
+      clearInterval(id);
+    };
   }, []);
 
   // Timer-based categorization logic
@@ -88,9 +84,8 @@ function App({ time, onTimeUpdate }) {
       const { upcoming, ongoing } = categorizeAuctions(allAuctions);
       setUpcomingAuctions(upcoming);
       setOngoingAuctions(ongoing);
-    }, 1000); // every second
+    }, 1000);
 
-    // Run once immediately as well
     const { upcoming, ongoing } = categorizeAuctions(allAuctions);
     setUpcomingAuctions(upcoming);
     setOngoingAuctions(ongoing);
@@ -100,58 +95,63 @@ function App({ time, onTimeUpdate }) {
 
   // Filter auctions based on search term
   useEffect(() => {
-    const allAuctions = [...upcomingAuctions, ...ongoingAuctions];
+    const combined = [...upcomingAuctions, ...ongoingAuctions];
     if (searchTerm) {
-      const filtered = allAuctions.filter((auction) => {
+      const filtered = combined.filter((auction) => {
         return (
-          auction.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-          auction.product.toLowerCase().includes(searchTerm.toLowerCase())
+          (auction.name || "").toLowerCase().includes(searchTerm.toLowerCase()) ||
+          (auction.product || "").toLowerCase().includes(searchTerm.toLowerCase())
         );
       });
       setFilteredAuctions(filtered);
     } else {
-      setFilteredAuctions(allAuctions);
+      setFilteredAuctions(combined);
     }
   }, [searchTerm, upcomingAuctions, ongoingAuctions]);
 
+  // Ban status from backend
   useEffect(() => {
-    let unsubscribe;
-    unsubscribe = onAuthStateChanged(auth, async (user) => {
-      if (user) {
-        const userRef = doc(db, "users", user.uid);
-        const userSnap = await getDoc(userRef);
-        if (userSnap.exists()) {
-          const bannedUntil = userSnap.data().bannedUntil;
-          if (bannedUntil && bannedUntil.toDate() > new Date()) {
-            setIsBanned(true);
-            // Calculate remaining time
-            const now = new Date();
-            const diffMs = bannedUntil.toDate() - now;
-            const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24));
-            const diffHours = Math.floor((diffMs / (1000 * 60 * 60)) % 24);
-            const diffMinutes = Math.floor((diffMs / (1000 * 60)) % 60);
-            let msg = "";
-            if (diffDays > 0) msg += `${diffDays} day${diffDays > 1 ? "s" : ""} `;
-            if (diffHours > 0) msg += `${diffHours} hour${diffHours > 1 ? "s" : ""} `;
-            if (diffMinutes > 0) msg += `${diffMinutes} minute${diffMinutes > 1 ? "s" : ""}`;
-            setBanRemaining(msg.trim());
-          } else {
-            setIsBanned(false);
-            setBanRemaining("");
-          }
+    const unsub = onAuthStateChanged(auth, async (user) => {
+      if (!user) {
+        setIsBanned(false);
+        setBanRemaining("");
+        return;
+      }
+      try {
+        const profile = await api.getMyProfile();
+        const bannedUntil = profile?.user?.bannedUntil ? new Date(profile.user.bannedUntil) : null;
+
+        if (bannedUntil && bannedUntil > new Date()) {
+          setIsBanned(true);
+          const now = new Date();
+          const diffMs = bannedUntil - now;
+          const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24));
+          const diffHours = Math.floor((diffMs / (1000 * 60 * 60)) % 24);
+          const diffMinutes = Math.floor((diffMs / (1000 * 60)) % 60);
+          let msg = "";
+          if (diffDays > 0) msg += `${diffDays} day${diffDays > 1 ? "s" : ""} `;
+          if (diffHours > 0) msg += `${diffHours} hour${diffHours > 1 ? "s" : ""} `;
+          if (diffMinutes > 0) msg += `${diffMinutes} minute${diffMinutes > 1 ? "s" : ""}`;
+          setBanRemaining(msg.trim());
+        } else {
+          setIsBanned(false);
+          setBanRemaining("");
         }
-      } else {
+      } catch {
+        // if profile call fails, don't block UI
         setIsBanned(false);
         setBanRemaining("");
       }
     });
-    return () => unsubscribe && unsubscribe();
+
+    return () => unsub();
   }, []);
 
   if (loading) return <p>Loading auctions...</p>;
   if (error) return <p style={{ color: "red" }}>{error}</p>;
 
   const currentUser = auth.currentUser;
+
   return (
     <Router>
       <div className="App">
@@ -161,67 +161,65 @@ function App({ time, onTimeUpdate }) {
           <Routes>
             <Route path="/create-auction" element={<CreateAuctionPage />} />
             <Route path="/profile" element={<ProfilePage />} />
-            <Route
-              path="/my-auctions"
-              element={
-                <MyAuctionsPage searchTerm={searchTerm} />
-              }
-            />
+            <Route path="/my-auctions" element={<MyAuctionsPage searchTerm={searchTerm} />} />
             <Route path="/auction/:id" element={<AuctionDetail user={auth.currentUser} />} />
             <Route path="/auction/edit-auction/:id" element={<EditAuctionsPage />} />
 
-            <Route path="/" element={
-              <div className="home-page-container">
-                <h2 style={{ color: "#222", fontWeight: "bold" }}>Welcome to Online Auction</h2>
-                {isBanned && (
-                  <p style={{ color: "red", marginTop: 8 }}>
-                    You are banned from creating auctions until your ban expires.
-                    {banRemaining && <> (Remaining: {banRemaining})</>}
-                  </p>
-                )}
+            <Route
+              path="/"
+              element={
+                <div className="home-page-container">
+                  <h2 style={{ color: "#222", fontWeight: "bold" }}>
+                    Welcome to Online Auction
+                  </h2>
 
-                <div className="home-page-button"></div>
+                  {isBanned && (
+                    <p style={{ color: "red", marginTop: 8 }}>
+                      You are banned from creating auctions until your ban expires.
+                      {banRemaining && <> (Remaining: {banRemaining})</>}
+                    </p>
+                  )}
 
-                {/* Upcoming Auctions */}
-                {filteredAuctions.filter((auction) => upcomingAuctions.includes(auction)).length > 0 && (
-                  <div className="auctions-section">
-                    <h3>Upcoming Auctions</h3>
-                    <div className="auctions-grid">
-                      {filteredAuctions
-                        .filter(
-                          (auction) =>
-                            upcomingAuctions.includes(auction) &&
-                            (!currentUser || auction.userId !== currentUser.uid)
-                        ).map((auction) => (
-                          <AuctionCard key={auction.id} auction={auction} />
-                        ))}
+                  <div className="home-page-button"></div>
+
+                  {filteredAuctions.filter((a) => upcomingAuctions.includes(a)).length > 0 && (
+                    <div className="auctions-section">
+                      <h3>Upcoming Auctions</h3>
+                      <div className="auctions-grid">
+                        {filteredAuctions
+                          .filter(
+                            (auction) =>
+                              upcomingAuctions.includes(auction) &&
+                              (!currentUser || auction.userId !== currentUser.uid)
+                          )
+                          .map((auction) => (
+                            <AuctionCard key={auction.id} auction={auction} />
+                          ))}
+                      </div>
                     </div>
-                  </div>
-                )}
+                  )}
 
-                {/* Ongoing Auctions */}
-                {filteredAuctions.filter((auction) => ongoingAuctions.includes(auction)).length > 0 && (
-                  <div className="auctions-section">
-                    <h3>Ongoing Auctions</h3>
-                    <div className="auctions-grid">
-                      {filteredAuctions
-                        .filter(
-                          (auction) =>
-                            ongoingAuctions.includes(auction) &&
-                            (!currentUser || auction.userId !== currentUser.uid)
-                        ).map((auction) => (
-                          <AuctionCard key={auction.id} auction={auction} />
-                        ))}
+                  {filteredAuctions.filter((a) => ongoingAuctions.includes(a)).length > 0 && (
+                    <div className="auctions-section">
+                      <h3>Ongoing Auctions</h3>
+                      <div className="auctions-grid">
+                        {filteredAuctions
+                          .filter(
+                            (auction) =>
+                              ongoingAuctions.includes(auction) &&
+                              (!currentUser || auction.userId !== currentUser.uid)
+                          )
+                          .map((auction) => (
+                            <AuctionCard key={auction.id} auction={auction} />
+                          ))}
+                      </div>
                     </div>
-                  </div>
-                )}
+                  )}
 
-                {/* No Auctions */}
-                {filteredAuctions.length === 0 && !loading && (
-                  <p>No auctions found.</p>
-                )}
-              </div>
-            } />
+                  {filteredAuctions.length === 0 && !loading && <p>No auctions found.</p>}
+                </div>
+              }
+            />
           </Routes>
         </div>
       </div>
@@ -230,26 +228,33 @@ function App({ time, onTimeUpdate }) {
 }
 
 const AuctionCard = ({ auction }) => {
+  const start = toDateSafe(auction.startTime);
+  const end = toDateSafe(auction.endTime);
+
   return (
     <div className="auction-card">
       {auction.imageUrls && auction.imageUrls.length > 0 ? (
         <img src={auction.imageUrls[0]} alt={auction.name} className="auction-image" />
-      ) : auction.imageUrl && (
-        <img src={auction.imageUrl} alt={auction.name} className="auction-image" />
+      ) : (
+        auction.imageUrl && <img src={auction.imageUrl} alt={auction.name} className="auction-image" />
       )}
+
       <h3>{auction.name}</h3>
       <p className="meta">Product: {auction.product}</p>
       <p className="meta">Category: {auction.category}</p>
+
       <p className="starting-price">
-        Starting Price: {auction.startingPrice
-          ? `${new Intl.NumberFormat('vi-VN').format(Number(auction.startingPrice))} VND`
-          : 'N/A'}
+        Starting Price:{" "}
+        {auction.startingPrice
+          ? `${new Intl.NumberFormat("vi-VN").format(Number(auction.startingPrice))} VND`
+          : "N/A"}
       </p>
+
       <div className="time-section">
-        {auction.startTime && (
+        {start && (
           <p className="time">
             🕒 Start:{" "}
-            {auction.startTime.toDate().toLocaleString("en-GB", {
+            {start.toLocaleString("en-GB", {
               day: "2-digit",
               month: "2-digit",
               year: "numeric",
@@ -260,10 +265,10 @@ const AuctionCard = ({ auction }) => {
             })}
           </p>
         )}
-        {auction.endTime && (
+        {end && (
           <p className="time">
             ⏰ End:{" "}
-            {auction.endTime.toDate().toLocaleString("en-GB", {
+            {end.toLocaleString("en-GB", {
               day: "2-digit",
               month: "2-digit",
               year: "numeric",
@@ -275,6 +280,7 @@ const AuctionCard = ({ auction }) => {
           </p>
         )}
       </div>
+
       <Link to={`/auction/${auction.id}`} className="detail-button-link">
         <div className="detail-button">Detail</div>
       </Link>
@@ -289,4 +295,3 @@ function Root() {
 
 export { Root };
 export default App;
-
